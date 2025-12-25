@@ -1,11 +1,15 @@
-# 🛠️ SIGIL-TOOLS
-
 > **Privacy-First Web Tools for Students**  
 > 대학생을 위한 프라이버시 우선 웹 도구 모음
 
 [![GitHub Pages](https://img.shields.io/badge/demo-live-success)](https://daemonxid.github.io/SIGIL-TOOLS/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![DAEMON Architecture](https://img.shields.io/badge/DAEMON-Architecture-purple)](https://github.com/daemonxid)
+
+## 🌐 Live Demo
+
+**👉 <https://daemonxid.github.io/SIGIL-TOOLS/>**
+
+> **참고:** GitHub Pages가 처음 배포되는 경우 1-2분 정도 소요될 수 있습니다.
 
 ## ✨ Features
 
