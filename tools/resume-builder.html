@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📝 Resume Builder | SIGIL TOOLS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        input, textarea, select {
+            background: rgba(10, 10, 27, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            width: 100%;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        .preview-paper {
+            background: white;
+            color: #1f2937;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            min-height: 800px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            border-bottom: 2px solid #6366f1;
+            padding-bottom: 0.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .item-card {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+<body x-data="resumeBuilder()" x-init="init()">
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">📝</span>
+                    <h1 class="text-xl font-bold gradient-text">Resume Builder</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Form Section -->
+            <div class="space-y-6">
+                <!-- Personal Info -->
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4">👤 개인정보</h3>
+                    <div class="space-y-3">
+                        <input type="text" x-model="resume.name" @input="saveData()" placeholder="이름">
+                        <input type="text" x-model="resume.title" @input="saveData()" placeholder="직무 / 직책 (예: Frontend Developer)">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="email" x-model="resume.email" @input="saveData()" placeholder="이메일">
+                            <input type="tel" x-model="resume.phone" @input="saveData()" placeholder="전화번호">
+                        </div>
+                        <input type="text" x-model="resume.location" @input="saveData()" placeholder="거주지 (선택)">
+                        <textarea x-model="resume.summary" @input="saveData()" rows="3" placeholder="간단한 자기소개 (2-3줄)"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Education -->
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">🎓 학력</h3>
+                        <button @click="addEducation()" class="px-3 py-1 bg-primary-500/20 text-primary-300 rounded text-sm">+ 추가</button>
+                    </div>
+                    <div class="space-y-3">
+                        <template x-for="(edu, index) in resume.education" :key="index">
+                            <div class="item-card">
+                                <div class="flex justify-between items-start mb-2">
+                                    <input type="text" x-model="edu.school" @input="saveData()" placeholder="학교명" class="flex-1 mr-2">
+                                    <button @click="removeEducation(index)" class="text-red-400 hover:text-red-300">✕</button>
+                                </div>
+                                <input type="text" x-model="edu.degree" @input="saveData()" placeholder="학위 (예: 컴퓨터공학 학사)" class="mb-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="text" x-model="edu.period" @input="saveData()" placeholder="기간 (2020.03 - 2024.02)">
+                                    <input type="text" x-model="edu.gpa" @input="saveData()" placeholder="학점 (선택)">
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Experience -->
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">💼 경력</h3>
+                        <button @click="addExperience()" class="px-3 py-1 bg-primary-500/20 text-primary-300 rounded text-sm">+ 추가</button>
+                    </div>
+                    <div class="space-y-3">
+                        <template x-for="(exp, index) in resume.experience" :key="index">
+                            <div class="item-card">
+                                <div class="flex justify-between items-start mb-2">
+                                    <input type="text" x-model="exp.company" @input="saveData()" placeholder="회사명" class="flex-1 mr-2">
+                                    <button @click="removeExperience(index)" class="text-red-400 hover:text-red-300">✕</button>
+                                </div>
+                                <input type="text" x-model="exp.position" @input="saveData()" placeholder="직책" class="mb-2">
+                                <input type="text" x-model="exp.period" @input="saveData()" placeholder="기간" class="mb-2">
+                                <textarea x-model="exp.description" @input="saveData()" rows="2" placeholder="주요 업무 및 성과"></textarea>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Skills -->
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4">🛠️ 기술 스택</h3>
+                    <textarea x-model="resume.skills" @input="saveData()" rows="3" placeholder="쉼표로 구분 (예: JavaScript, React, Node.js, Python, Docker)"></textarea>
+                </div>
+                
+                <!-- Projects -->
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">🚀 프로젝트</h3>
+                        <button @click="addProject()" class="px-3 py-1 bg-primary-500/20 text-primary-300 rounded text-sm">+ 추가</button>
+                    </div>
+                    <div class="space-y-3">
+                        <template x-for="(proj, index) in resume.projects" :key="index">
+                            <div class="item-card">
+                                <div class="flex justify-between items-start mb-2">
+                                    <input type="text" x-model="proj.name" @input="saveData()" placeholder="프로젝트명" class="flex-1 mr-2">
+                                    <button @click="removeProject(index)" class="text-red-400 hover:text-red-300">✕</button>
+                                </div>
+                                <input type="text" x-model="proj.period" @input="saveData()" placeholder="기간" class="mb-2">
+                                <textarea x-model="proj.description" @input="saveData()" rows="2" placeholder="프로젝트 설명 및 역할"></textarea>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Preview Section -->
+            <div class="sticky top-24">
+                <div class="card mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">👁️ 미리보기</h3>
+                        <button @click="downloadPDF()" class="btn-primary">
+                            📥 PDF 다운로드
+                        </button>
+                    </div>
+                    
+                    <div class="preview-paper" id="resume-preview">
+                        <!-- Header -->
+                        <div class="text-center border-b-2 border-gray-300 pb-4 mb-4">
+                            <h1 class="text-3xl font-bold mb-2" x-text="resume.name || '이름'"></h1>
+                            <div class="text-lg text-gray-600 mb-2" x-text="resume.title || '직무'"></div>
+                            <div class="text-sm text-gray-500 space-x-3">
+                                <span x-show="resume.email" x-text="resume.email"></span>
+                                <span x-show="resume.phone" x-text="resume.phone"></span>
+                                <span x-show="resume.location" x-text="resume.location"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Summary -->
+                        <div x-show="resume.summary">
+                            <div class="section-title">Profile</div>
+                            <p class="text-gray-700 leading-relaxed" x-text="resume.summary"></p>
+                        </div>
+                        
+                        <!-- Education -->
+                        <div x-show="resume.education.length > 0">
+                            <div class="section-title">Education</div>
+                            <template x-for="edu in resume.education" :key="edu">
+                                <div class="mb-3">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="font-bold text-gray-800" x-text="edu.school"></div>
+                                            <div class="text-gray-600" x-text="edu.degree"></div>
+                                        </div>
+                                        <div class="text-sm text-gray-500" x-text="edu.period"></div>
+                                    </div>
+                                    <div x-show="edu.gpa" class="text-sm text-gray-600 mt-1" x-text="`GPA: ${edu.gpa}`"></div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Experience -->
+                        <div x-show="resume.experience.length > 0">
+                            <div class="section-title">Experience</div>
+                            <template x-for="exp in resume.experience" :key="exp">
+                                <div class="mb-4">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <div class="font-bold text-gray-800" x-text="exp.company"></div>
+                                            <div class="text-gray-600" x-text="exp.position"></div>
+                                        </div>
+                                        <div class="text-sm text-gray-500" x-text="exp.period"></div>
+                                    </div>
+                                    <div class="text-gray-700 mt-2 text-sm whitespace-pre-wrap" x-text="exp.description"></div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Skills -->
+                        <div x-show="resume.skills">
+                            <div class="section-title">Skills</div>
+                            <div class="text-gray-700" x-text="resume.skills"></div>
+                        </div>
+                        
+                        <!-- Projects -->
+                        <div x-show="resume.projects.length > 0">
+                            <div class="section-title">Projects</div>
+                            <template x-for="proj in resume.projects" :key="proj">
+                                <div class="mb-3">
+                                    <div class="flex justify-between items-start">
+                                        <div class="font-bold text-gray-800" x-text="proj.name"></div>
+                                        <div class="text-sm text-gray-500" x-text="proj.period"></div>
+                                    </div>
+                                    <div class="text-gray-700 mt-1 text-sm whitespace-pre-wrap" x-text="proj.description"></div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30">
+                    <h4 class="font-bold mb-3">💡 작성 팁</h4>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li>• 간결하고 명확하게 작성하세요</li>
+                        <li>• 숫자와 구체적인 성과를 포함하세요</li>
+                        <li>• 최신 경력/프로젝트부터 작성하세요</li>
+                        <li>• A4 1-2페이지 분량이 적절합니다</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        function resumeBuilder() {
+            return {
+                resume: {
+                    name: '',
+                    title: '',
+                    email: '',
+                    phone: '',
+                    location: '',
+                    summary: '',
+                    education: [],
+                    experience: [],
+                    skills: '',
+                    projects: []
+                },
+                
+                init() {
+                    this.loadData();
+                },
+                
+                addEducation() {
+                    this.resume.education.push({ school: '', degree: '', period: '', gpa: '' });
+                },
+                
+                removeEducation(index) {
+                    this.resume.education.splice(index, 1);
+                    this.saveData();
+                },
+                
+                addExperience() {
+                    this.resume.experience.push({ company: '', position: '', period: '', description: '' });
+                },
+                
+                removeExperience(index) {
+                    this.resume.experience.splice(index, 1);
+                    this.saveData();
+                },
+                
+                addProject() {
+                    this.resume.projects.push({ name: '', period: '', description: '' });
+                },
+                
+                removeProject(index) {
+                    this.resume.projects.splice(index, 1);
+                    this.saveData();
+                },
+                
+                saveData() {
+                    localStorage.setItem('resume-data', JSON.stringify(this.resume));
+                },
+                
+                loadData() {
+                    const saved = localStorage.getItem('resume-data');
+                    if (saved) {
+                        this.resume = JSON.parse(saved);
+                    }
+                },
+                
+                downloadPDF() {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    
+                    let y = 20;
+                    const lineHeight = 7;
+                    const marginLeft = 20;
+                    const pageWidth = 170;
+                    
+                    // Header
+                    doc.setFontSize(24);
+                    doc.setFont(undefined, 'bold');
+                    doc.text(this.resume.name || 'Resume', marginLeft, y);
+                    y += 10;
+                    
+                    doc.setFontSize(12);
+                    doc.setFont(undefined, 'normal');
+                    doc.text(this.resume.title || '', marginLeft, y);
+                    y += 7;
+                    
+                    doc.setFontSize(10);
+                    const contact = [this.resume.email, this.resume.phone, this.resume.location].filter(x => x).join(' | ');
+                    doc.text(contact, marginLeft, y);
+                    y += 10;
+                    
+                    // Summary
+                    if (this.resume.summary) {
+                        doc.setFontSize(14);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('PROFILE', marginLeft, y);
+                        y += 7;
+                        
+                        doc.setFontSize(10);
+                        doc.setFont(undefined, 'normal');
+                        const summaryLines = doc.splitTextToSize(this.resume.summary, pageWidth);
+                        doc.text(summaryLines, marginLeft, y);
+                        y += summaryLines.length * lineHeight + 5;
+                    }
+                    
+                    // Education
+                    if (this.resume.education.length > 0) {
+                        doc.setFontSize(14);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('EDUCATION', marginLeft, y);
+                        y += 7;
+                        
+                        this.resume.education.forEach(edu => {
+                            doc.setFontSize(11);
+                            doc.setFont(undefined, 'bold');
+                            doc.text(edu.school, marginLeft, y);
+                            doc.setFont(undefined, 'normal');
+                            doc.text(edu.period, pageWidth, y, { align: 'right' });
+                            y += 5;
+                            
+                            doc.setFontSize(10);
+                            doc.text(edu.degree, marginLeft, y);
+                            y += 5;
+                            if (edu.gpa) {
+                                doc.text(`GPA: ${edu.gpa}`, marginLeft, y);
+                                y += 7;
+                            }
+                        });
+                        y += 3;
+                    }
+                    
+                    // Experience
+                    if (this.resume.experience.length > 0) {
+                        if (y > 250) { doc.addPage(); y = 20; }
+                        
+                        doc.setFontSize(14);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('EXPERIENCE', marginLeft, y);
+                        y += 7;
+                        
+                        this.resume.experience.forEach(exp => {
+                            doc.setFontSize(11);
+                            doc.setFont(undefined, 'bold');
+                            doc.text(exp.company, marginLeft, y);
+                            doc.setFont(undefined, 'normal');
+                            doc.text(exp.period, pageWidth, y, { align: 'right' });
+                            y += 5;
+                            
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'italic');
+                            doc.text(exp.position, marginLeft, y);
+                            y += 5;
+                            
+                            doc.setFont(undefined, 'normal');
+                            const descLines = doc.splitTextToSize(exp.description, pageWidth);
+                            doc.text(descLines, marginLeft, y);
+                            y += descLines.length * lineHeight + 3;
+                        });
+                        y += 3;
+                    }
+                    
+                    // Skills
+                    if (this.resume.skills) {
+                        if (y > 250) { doc.addPage(); y = 20; }
+                        
+                        doc.setFontSize(14);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('SKILLS', marginLeft, y);
+                        y += 7;
+                        
+                        doc.setFontSize(10);
+                        doc.setFont(undefined, 'normal');
+                        const skillsLines = doc.splitTextToSize(this.resume.skills, pageWidth);
+                        doc.text(skillsLines, marginLeft, y);
+                        y += skillsLines.length * lineHeight + 5;
+                    }
+                    
+                    // Projects
+                    if (this.resume.projects.length > 0) {
+                        if (y > 250) { doc.addPage(); y = 20; }
+                        
+                        doc.setFontSize(14);
+                        doc.setFont(undefined, 'bold');
+                        doc.text('PROJECTS', marginLeft, y);
+                        y += 7;
+                        
+                        this.resume.projects.forEach(proj => {
+                            doc.setFontSize(11);
+                            doc.setFont(undefined, 'bold');
+                            doc.text(proj.name, marginLeft, y);
+                            doc.setFont(undefined, 'normal');
+                            doc.text(proj.period, pageWidth, y, { align: 'right' });
+                            y += 5;
+                            
+                            doc.setFontSize(10);
+                            const projLines = doc.splitTextToSize(proj.description, pageWidth);
+                            doc.text(projLines, marginLeft, y);
+                            y += projLines.length * lineHeight + 3;
+                        });
+                    }
+                    
+                    doc.save(`${this.resume.name || 'Resume'}_CV.pdf`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
