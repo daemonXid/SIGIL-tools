@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<link rel="icon" href="https://fav.farm/🛠️" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛠️ SIGIL TOOLS | AI-Powered Web Tools</title>
@@ -614,7 +615,7 @@
                 openTool(id) {
                     const tool = this.tools.find(t => t.id === id);
                     if (tool.status === 'live') {
-                        window.location.href = `/tools/${id}.html`;
+                        window.location.href = `tools/${id}.html`;
                     } else {
                         alert(`🚀 ${tool.nameKo}이(가) 곧 출시됩니다!\n\n알림을 받으시려면 GitHub에서 Star를 눌러주세요.`);
                     }
