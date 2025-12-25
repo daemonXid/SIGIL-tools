@@ -564,5 +564,39 @@
             }
         }
     </script>
+    <!-- Share Component -->
+    <div x-data="shareComponent()" class="fixed bottom-6 right-6 z-50">
+        <button @click="showShareMenu = !showShareMenu" class="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center text-2xl" title="Share">📤</button>
+        <div x-show="showShareMenu" @click.away="showShareMenu = false" x-transition class="absolute bottom-20 right-0 bg-dark-700/95 backdrop-blur-lg border border-primary-500/30 rounded-xl p-4 shadow-2xl min-w-[200px]">
+            <div class="text-sm font-bold text-gray-300 mb-3">공유하기</div>
+            <div class="space-y-2">
+                <button @click="copyURL()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">🔗</span><span class="text-sm">링크 복사</span></button>
+                <button @click="shareTwitter()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">🐦</span><span class="text-sm">Twitter</span></button>
+                <button @click="shareFacebook()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">📘</span><span class="text-sm">Facebook</span></button>
+            </div>
+            <div x-show="copied" x-transition class="mt-3 p-2 bg-green-500/20 border border-green-500/50 rounded text-center text-xs text-green-300">✅ 복사됨!</div>
+        </div>
+    </div>
+    <script>
+    function shareComponent() {
+        return {
+            showShareMenu: false,
+            copied: false,
+            async copyURL() {
+                try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    this.copied = true;
+                    setTimeout(() => { this.copied = false; }, 2000);
+                } catch (err) { alert("복사 실패"); }
+            },
+            shareTwitter() {
+                window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}</body>text=${encodeURIComponent(document.title)}`, "_blank");
+            },
+            shareFacebook() {
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, "_blank");
+            }
+        }
+    }
+    </script>
 </body>
 </html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Color Palette Extractor | SIGIL TOOLS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .color-swatch {
+            width: 100%;
+            height: 120px;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .color-swatch:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .drop-zone {
+            border: 3px dashed rgba(99, 102, 241, 0.4);
+            border-radius: 1rem;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover, .drop-zone.dragging {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+    </style>
+</head>
+<body x-data="colorExtractor()">
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🎨</span>
+                    <h1 class="text-xl font-bold gradient-text">Color Palette Extractor</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <div>
+                <div class="card mb-6">
+                    <div class="drop-zone" @click="$refs.fileInput.click()" @dragover.prevent="dragging = true" @dragleave="dragging = false" @drop.prevent="handleDrop" :class="{ 'dragging': dragging }">
+                        <input type="file" x-ref="fileInput" @change="loadImage" accept="image/*" class="hidden">
+                        <div class="text-5xl mb-4">🖼️</div>
+                        <p class="text-lg font-semibold mb-2">이미지를 드래그하거나 클릭하세요</p>
+                        <p class="text-sm text-gray-400">JPG, PNG, WebP 지원</p>
+                    </div>
+                </div>
+                
+                <div x-show="imageLoaded" class="card">
+                    <h3 class="text-lg font-bold mb-4">📸 업로드된 이미지</h3>
+                    <img :src="imageSrc" class="w-full rounded-lg" alt="Uploaded">
+                </div>
+            </div>
+            
+            <div>
+                <div class="card" x-show="palette.length > 0">
+                    <h3 class="text-lg font-bold mb-4">🎨 추출된 색상 팔레트</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <template x-for="(color, index) in palette" :key="index">
+                            <div @click="copyColor(color.hex)" class="group cursor-pointer">
+                                <div class="color-swatch mb-2" :style="`background: ${color.hex}`">
+                                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                        <span class="text-white font-bold">Click to Copy</span>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="font-mono text-sm font-bold" x-text="color.hex"></div>
+                                    <div class="text-xs text-gray-400" x-text="`RGB(${color.rgb})`"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <div x-show="copied" class="mt-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-center">
+                    ✅ 클립보드에 복사되었습니다!
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <canvas x-ref="canvas" class="hidden"></canvas>
+    
+    <script>
+        function colorExtractor() {
+            return {
+                imageSrc: '',
+                imageLoaded: false,
+                dragging: false,
+                palette: [],
+                copied: false,
+                
+                loadImage(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        this.imageSrc = event.target.result;
+                        this.imageLoaded = true;
+                        this.extractColors(event.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                },
+                
+                handleDrop(e) {
+                    this.dragging = false;
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            this.imageSrc = event.target.result;
+                            this.imageLoaded = true;
+                            this.extractColors(event.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                },
+                
+                extractColors(src) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = this.$refs.canvas;
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const pixels = imageData.data;
+                        
+                        const colorMap = {};
+                        for (let i = 0; i < pixels.length; i += 4) {
+                            const r = pixels[i];
+                            const g = pixels[i + 1];
+                            const b = pixels[i + 2];
+                            const key = `${r},${g},${b}`;
+                            colorMap[key] = (colorMap[key] || 0) + 1;
+                        }
+                        
+                        const sortedColors = Object.entries(colorMap)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 6)
+                            .map(([rgb]) => {
+                                const [r, g, b] = rgb.split(',').map(Number);
+                                return {
+                                    hex: this.rgbToHex(r, g, b),
+                                    rgb: `${r}, ${g}, ${b}`
+                                };
+                            });
+                        
+                        this.palette = sortedColors;
+                    };
+                    img.src = src;
+                },
+                
+                rgbToHex(r, g, b) {
+                    return '#' + [r, g, b].map(x => {
+                        const hex = x.toString(16);
+                        return hex.length === 1 ? '0' + hex : hex;
+                    }).join('');
+                },
+                
+                async copyColor(hex) {
+                    try {
+                        await navigator.clipboard.writeText(hex);
+                        this.copied = true;
+                        setTimeout(() => { this.copied = false; }, 2000);
+                    } catch (err) {
+                        alert('복사 실패: ' + err.message);
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Share Component -->
+    <div x-data="shareComponent()" class="fixed bottom-6 right-6 z-50">
+        <button @click="showShareMenu = !showShareMenu" class="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center text-2xl" title="Share">📤</button>
+        <div x-show="showShareMenu" @click.away="showShareMenu = false" x-transition class="absolute bottom-20 right-0 bg-dark-700/95 backdrop-blur-lg border border-primary-500/30 rounded-xl p-4 shadow-2xl min-w-[200px]">
+            <div class="text-sm font-bold text-gray-300 mb-3">공유하기</div>
+            <div class="space-y-2">
+                <button @click="copyURL()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">🔗</span><span class="text-sm">링크 복사</span></button>
+                <button @click="shareTwitter()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">🐦</span><span class="text-sm">Twitter</span></button>
+                <button @click="shareFacebook()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">📘</span><span class="text-sm">Facebook</span></button>
+            </div>
+            <div x-show="copied" x-transition class="mt-3 p-2 bg-green-500/20 border border-green-500/50 rounded text-center text-xs text-green-300">✅ 복사됨!</div>
+        </div>
+    </div>
+    <script>
+    function shareComponent() {
+        return {
+            showShareMenu: false,
+            copied: false,
+            async copyURL() {
+                try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    this.copied = true;
+                    setTimeout(() => { this.copied = false; }, 2000);
+                } catch (err) { alert("복사 실패"); }
+            },
+            shareTwitter() {
+                window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}</body>text=${encodeURIComponent(document.title)}`, "_blank");
+            },
+            shareFacebook() {
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, "_blank");
+            }
+        }
+    }
+    </script>
+</body>
+</html>

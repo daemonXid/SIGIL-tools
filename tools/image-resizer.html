@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖼️ Image Batch Resizer | SIGIL TOOLS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .drop-zone {
+            border: 3px dashed rgba(99, 102, 241, 0.4);
+            border-radius: 1rem;
+            padding: 3rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover { border-color: #6366f1; background: rgba(99, 102, 241, 0.1); }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #06b6d4, #3b82f6);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body x-data="imageBatchResizer()">
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🖼️</span>
+                    <h1 class="text-xl font-bold gradient-text">Image Batch Resizer</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <div>
+                <div class="card mb-6">
+                    <div class="drop-zone" @click="$refs.fileInput.click()" @dragover.prevent @drop.prevent="handleDrop">
+                        <input type="file" x-ref="fileInput" @change="loadImages" accept="image/*" multiple class="hidden">
+                        <div class="text-5xl mb-4">📁</div>
+                        <p class="text-lg font-semibold mb-2">이미지를 드래그하거나 클릭하세요</p>
+                        <p class="text-sm text-gray-400">여러 파일 선택 가능</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4">⚙️ 옵션</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">최대 너비 (px)</label>
+                            <input type="number" x-model.number="maxWidth" min="100" max="4000" class="w-full px-4 py-2 bg-dark-700 border border-primary-500/30 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">품질 (%)</label>
+                            <input type="range" x-model.number="quality" min="10" max="100" step="10" class="w-full">
+                            <div class="text-center text-sm mt-1" x-text="`${quality}%`"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">출력 형식</label>
+                            <select x-model="outputFormat" class="w-full px-4 py-2 bg-dark-700 border border-primary-500/30 rounded-lg">
+                                <option value="image/jpeg">JPEG</option>
+                                <option value="image/png">PNG</option>
+                                <option value="image/webp">WebP</option>
+                            </select>
+                        </div>
+                        <button @click="processImages()" :disabled="images.length === 0 || processing" 
+                                class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!processing">🚀 처리 시작</span>
+                            <span x-show="processing">⏳ 처리 중...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4">📋 이미지 목록</h3>
+                    <div x-show="images.length === 0" class="text-center py-12 text-gray-500">
+                        <div class="text-4xl mb-2">🖼️</div>
+                        <p>이미지를 추가해주세요</p>
+                    </div>
+                    
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        <template x-for="(img, index) in images" :key="index">
+                            <div class="flex items-center justify-between p-3 bg-dark-700/60 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <img :src="img.preview" class="w-12 h-12 object-cover rounded">
+                                    <div class="text-sm">
+                                        <div class="font-medium" x-text="img.name"></div>
+                                        <div class="text-xs text-gray-400" x-text="`${(img.size / 1024).toFixed(1)} KB`"></div>
+                                    </div>
+                                </div>
+                                <button @click="removeImage(index)" class="text-red-400 hover:text-red-300 text-lg">✕</button>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div x-show="processing" class="mt-4">
+                        <div class="text-sm text-gray-400 mb-2" x-text="`처리 중: ${processedCount}/${images.length}`"></div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" :style="`width: ${(processedCount / images.length) * 100}%`"></div>
+                        </div>
+                    </div>
+                    
+                    <button @click="downloadZIP()" x-show="processed.length > 0 && !processing" 
+                            class="w-full mt-4 py-3 bg-green-500 text-white rounded-lg font-bold">
+                        📦 ZIP 다운로드 (<span x-text="processed.length"></span>개 파일)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        function imageBatchResizer() {
+            return {
+                images: [],
+                processed: [],
+                processing: false,
+                processedCount: 0,
+                maxWidth: 1920,
+                quality: 80,
+                outputFormat: 'image/webp',
+                
+                loadImages(e) {
+                    const files = Array.from(e.target.files);
+                    files.forEach(file => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                this.images.push({
+                                    name: file.name,
+                                    size: file.size,
+                                    preview: event.target.result,
+                                    data: event.target.result
+                                });
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                },
+                
+                handleDrop(e) {
+                    const files = Array.from(e.dataTransfer.files);
+                    files.forEach(file => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                this.images.push({
+                                    name: file.name,
+                                    size: file.size,
+                                    preview: event.target.result,
+                                    data: event.target.result
+                                });
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                },
+                
+                removeImage(index) {
+                    this.images.splice(index, 1);
+                },
+                
+                async processImages() {
+                    this.processing = true;
+                    this.processed = [];
+                    this.processedCount = 0;
+                    
+                    for (const img of this.images) {
+                        const processed = await this.resizeImage(img);
+                        this.processed.push(processed);
+                        this.processedCount++;
+                    }
+                    
+                    this.processing = false;
+                },
+                
+                resizeImage(img) {
+                    return new Promise((resolve) => {
+                        const image = new Image();
+                        image.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            
+                            let width = image.width;
+                            let height = image.height;
+                            
+                            if (width > this.maxWidth) {
+                                height = (height * this.maxWidth) / width;
+                                width = this.maxWidth;
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(image, 0, 0, width, height);
+                            
+                            canvas.toBlob((blob) => {
+                                resolve({
+                                    name: img.name.replace(/\.[^.]+$/, this.getExtension()),
+                                    blob: blob
+                                });
+                            }, this.outputFormat, this.quality / 100);
+                        };
+                        image.src = img.data;
+                    });
+                },
+                
+                getExtension() {
+                    const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
+                    return ext[this.outputFormat] || '.jpg';
+                },
+                
+                async downloadZIP() {
+                    const zip = new JSZip();
+                    this.processed.forEach(item => {
+                        zip.file(item.name, item.blob);
+                    });
+                    
+                    const content = await zip.generateAsync({ type: 'blob' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = 'resized-images.zip';
+                    link.click();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

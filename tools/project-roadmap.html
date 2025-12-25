@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 Project Roadmap | SIGIL TOOLS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        textarea {
+            background: rgba(10, 10, 27, 0.9);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #e5e7eb;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            min-height: 400px;
+            resize: vertical;
+        }
+        #mermaid-output {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            min-height: 400px;
+        }
+    </style>
+</head>
+<body x-data="roadmapTool()" x-init="init()">
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">📅</span>
+                    <h1 class="text-xl font-bold gradient-text">Project Roadmap</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold">📝 Mermaid 코드</h3>
+                    <button @click="loadExample()" class="px-4 py-2 bg-primary-500/20 text-primary-300 rounded-lg text-sm hover:bg-primary-500/30 transition-colors">
+                        예제 불러오기
+                    </button>
+                </div>
+                <textarea x-model="mermaidCode" @input="renderDiagram()" placeholder="Mermaid Gantt 차트 코드를 입력하세요..."></textarea>
+            </div>
+            
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold">📊 미리보기</h3>
+                    <button @click="downloadPNG()" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all">
+                        PNG 저장
+                    </button>
+                </div>
+                <div id="mermaid-output" class="overflow-auto"></div>
+            </div>
+        </div>
+        
+        <div class="card mt-8 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30">
+            <h4 class="font-bold mb-3">💡 Mermaid Gantt 가이드</h4>
+            <div class="text-sm text-gray-300 space-y-2">
+                <p>• <code class="bg-dark-900 px-2 py-1 rounded">gantt</code>: Gantt 차트 시작</p>
+                <p>• <code class="bg-dark-900 px-2 py-1 rounded">section 이름</code>: 섹션 구분</p>
+                <p>• <code class="bg-dark-900 px-2 py-1 rounded">작업명 :상태, 시작일, 기간</code>: 작업 추가</p>
+                <p>• 상태: <code class="bg-dark-900 px-2 py-1 rounded">done</code> (완료), <code class="bg-dark-900 px-2 py-1 rounded">active</code> (진행중), <code class="bg-dark-900 px-2 py-1 rounded">crit</code> (중요)</p>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: 'default',
+            gantt: { fontSize: 14 }
+        });
+        
+        function roadmapTool() {
+            return {
+                mermaidCode: '',
+                
+                init() {
+                    this.loadExample();
+                },
+                
+                async renderDiagram() {
+                    if (!this.mermaidCode.trim()) return;
+                    
+                    const output = document.getElementById('mermaid-output');
+                    output.innerHTML = '';
+                    
+                    try {
+                        const { svg } = await mermaid.render('mermaid-diagram', this.mermaidCode);
+                        output.innerHTML = svg;
+                    } catch (err) {
+                        output.innerHTML = `<div class="text-red-500 p-4">오류: ${err.message}</div>`;
+                    }
+                },
+                
+                loadExample() {
+                    this.mermaidCode = `gantt
+    title 프로젝트 일정표
+    dateFormat YYYY-MM-DD
+    
+    section 기획
+    요구사항 분석    :done, req, 2024-01-01, 5d
+    UI/UX 디자인     :done, design, after req, 7d
+    
+    section 개발
+    프론트엔드 개발  :active, frontend, 2024-01-15, 14d
+    백엔드 API 개발  :backend, 2024-01-20, 12d
+    DB 구축          :crit, db, 2024-01-18, 8d
+    
+    section 배포
+    QA 테스트        :qa, after frontend, 5d
+    프로덕션 배포    :crit, deploy, after qa, 2d`;
+                    this.renderDiagram();
+                },
+                
+                async downloadPNG() {
+                    const svg = document.querySelector('#mermaid-output svg');
+                    if (!svg) {
+                        alert('먼저 다이어그램을 생성해주세요');
+                        return;
+                    }
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const svgData = new XMLSerializer().serializeToString(svg);
+                    const img = new Image();
+                    
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        
+                        canvas.toBlob((blob) => {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'roadmap.png';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        });
+                    };
+                    
+                    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+                }
+            }
+        }
+    </script>
+    <!-- Share Component -->
+    <div x-data="shareComponent()" class="fixed bottom-6 right-6 z-50">
+        <button @click="showShareMenu = !showShareMenu" class="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center text-2xl" title="Share">📤</button>
+        <div x-show="showShareMenu" @click.away="showShareMenu = false" x-transition class="absolute bottom-20 right-0 bg-dark-700/95 backdrop-blur-lg border border-primary-500/30 rounded-xl p-4 shadow-2xl min-w-[200px]">
+            <div class="text-sm font-bold text-gray-300 mb-3">공유하기</div>
+            <div class="space-y-2">
+                <button @click="copyURL()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">🔗</span><span class="text-sm">링크 복사</span></button>
+                <button @click="shareTwitter()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">🐦</span><span class="text-sm">Twitter</span></button>
+                <button @click="shareFacebook()" class="w-full flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-white/10 transition-colors text-left"><span class="text-xl">📘</span><span class="text-sm">Facebook</span></button>
+            </div>
+            <div x-show="copied" x-transition class="mt-3 p-2 bg-green-500/20 border border-green-500/50 rounded text-center text-xs text-green-300">✅ 복사됨!</div>
+        </div>
+    </div>
+    <script>
+    function shareComponent() {
+        return {
+            showShareMenu: false,
+            copied: false,
+            async copyURL() {
+                try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    this.copied = true;
+                    setTimeout(() => { this.copied = false; }, 2000);
+                } catch (err) { alert("복사 실패"); }
+            },
+            shareTwitter() {
+                window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}</body>text=${encodeURIComponent(document.title)}`, "_blank");
+            },
+            shareFacebook() {
+                window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, "_blank");
+            }
+        }
+    }
+    </script>
+</body>
+</html>

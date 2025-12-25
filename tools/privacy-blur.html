@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Privacy Blur Tool | SIGIL TOOLS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #ef4444, #f97316, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        #canvas {
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            cursor: crosshair;
+            max-width: 100%;
+            display: block;
+        }
+    </style>
+</head>
+<body x-data="blurTool()">
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🔒</span>
+                    <h1 class="text-xl font-bold gradient-text">Privacy Blur Tool</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="card mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold">📸 이미지 업로드</h3>
+                <div class="flex gap-2">
+                    <input type="file" @change="loadImage" accept="image/*" class="hidden" x-ref="fileInput">
+                    <button @click="$refs.fileInput.click()" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-semibold">
+                        이미지 선택
+                    </button>
+                    <button @click="clearCanvas()" x-show="imageLoaded" class="px-4 py-2 bg-red-500/20 text-red-300 rounded-lg border border-red-500/30 font-semibold">
+                        초기화
+                    </button>
+                    <button @click="downloadImage()" x-show="imageLoaded" class="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold">
+                        저장
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mb-4 grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">블러 크기</label>
+                    <input type="range" x-model.number="blurSize" min="10" max="100" step="5" class="w-full">
+                    <div class="text-center text-sm mt-1" x-text="`${blurSize}px`"></div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">블러 강도</label>
+                    <input type="range" x-model.number="blurStrength" min="5" max="30" step="1" class="w-full">
+                    <div class="text-center text-sm mt-1" x-text="`${blurStrength}px`"></div>
+                </div>
+            </div>
+            
+            <div x-show="!imageLoaded" class="text-center py-12 text-gray-500 border-2 border-dashed border-gray-700 rounded-lg">
+                <div class="text-5xl mb-4">🖼️</div>
+                <p>이미지를 선택하고 마우스로 드래그하여 블러 처리하세요</p>
+            </div>
+            
+            <canvas x-ref="canvas" x-show="imageLoaded" 
+                    @mousedown="startDrawing" 
+                    @mousemove="draw" 
+                    @mouseup="stopDrawing" 
+                    @mouseleave="stopDrawing"
+                    @touchstart="startDrawing" 
+                    @touchmove="draw" 
+                    @touchend="stopDrawing">
+            </canvas>
+        </div>
+        
+        <div class="card bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/30">
+            <h4 class="font-bold mb-3">💡 사용 방법</h4>
+            <ul class="text-sm text-gray-300 space-y-2">
+                <li>• 이미지를 업로드하고 블러 처리할 부분을 드래그하세요</li>
+                <li>• 얼굴, 학번, 전화번호 등 개인정보를 가릴 수 있습니다</li>
+                <li>• 블러 크기와 강도를 조절할 수 있습니다</li>
+                <li>• 완료 후 '저장' 버튼으로 다운로드하세요</li>
+            </ul>
+        </div>
+    </main>
+    
+    <script>
+        function blurTool() {
+            return {
+                canvas: null,
+                ctx: null,
+                isDrawing: false,
+                imageLoaded: false,
+                blurSize: 30,
+                blurStrength: 15,
+                originalImageData: null,
+                
+                loadImage(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            this.canvas = this.$refs.canvas;
+                            this.ctx = this.canvas.getContext('2d');
+                            
+                            this.canvas.width = img.width;
+                            this.canvas.height = img.height;
+                            this.ctx.drawImage(img, 0, 0);
+                            this.originalImageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+                            this.imageLoaded = true;
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                },
+                
+                startDrawing(e) {
+                    this.isDrawing = true;
+                    this.draw(e);
+                },
+                
+                stopDrawing() {
+                    this.isDrawing = false;
+                },
+                
+                draw(e) {
+                    if (!this.isDrawing) return;
+                    
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = (e.clientX || e.touches[0].clientX) - rect.left;
+                    const y = (e.clientY || e.touches[0].clientY) - rect.top;
+                    
+                    const scaleX = this.canvas.width / rect.width;
+                    const scaleY = this.canvas.height / rect.height;
+                    
+                    const canvasX = x * scaleX;
+                    const canvasY = y * scaleY;
+                    
+                    this.ctx.filter = `blur(${this.blurStrength}px)`;
+                    const imageData = this.ctx.getImageData(
+                        Math.max(0, canvasX - this.blurSize / 2),
+                        Math.max(0, canvasY - this.blurSize / 2),
+                        this.blurSize,
+                        this.blurSize
+                    );
+                    this.ctx.putImageData(imageData, canvasX - this.blurSize / 2, canvasY - this.blurSize / 2);
+                    this.ctx.filter = 'none';
+                },
+                
+                clearCanvas() {
+                    if (this.originalImageData) {
+                        this.ctx.putImageData(this.originalImageData, 0, 0);
+                    }
+                },
+                
+                downloadImage() {
+                    const link = document.createElement('a');
+                    link.download = 'blurred-image.png';
+                    link.href = this.canvas.toDataURL('image/png');
+                    link.click();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
