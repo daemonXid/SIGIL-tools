@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 Meeting Roulette | SIGIL TOOLS</title>
+    <meta name="description" content="회의 룰렛 - 팀 프로젝트 발표자나 서기를 공정하게 선정">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .roulette-wheel {
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.2));
+            border: 8px solid rgba(245, 158, 11, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+        .roulette-wheel.spinning {
+            animation: spin 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(1800deg); }
+        }
+        .winner-text {
+            font-size: 3rem;
+            font-weight: 900;
+            text-align: center;
+            color: white;
+            text-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+        }
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1.25rem;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.4);
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        input {
+            background: rgba(10, 10, 27, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            width: 100%;
+        }
+    </style>
+</head>
+<body x-data="meetingRoulette()" x-init="init()">
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🎲</span>
+                    <h1 class="text-xl font-bold gradient-text">Meeting Roulette</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Roulette Section -->
+            <div class="flex flex-col items-center">
+                <div class="roulette-wheel mb-8" :class="{ 'spinning': isSpinning }">
+                    <div class="winner-text" x-text="displayName"></div>
+                </div>
+                
+                <button @click="spin()" :disabled="isSpinning || members.length === 0" 
+                        class="btn-primary mb-4">
+                    <span x-show="!isSpinning">🎯 룰렛 돌리기</span>
+                    <span x-show="isSpinning">🌀 선정 중...</span>
+                </button>
+                
+                <div x-show="winner" class="text-center p-6 bg-gradient-to-r from-amber-500/20 to-red-500/20 border-2 border-amber-500/50 rounded-xl">
+                    <div class="text-2xl font-bold mb-2">🎉 당첨!</div>
+                    <div class="text-4xl font-black gradient-text mb-2" x-text="winner"></div>
+                    <div class="text-sm text-gray-400">축하합니다!</div>
+                </div>
+            </div>
+            
+            <!-- Members Section -->
+            <div>
+                <div class="card mb-6">
+                    <h3 class="text-lg font-bold mb-4">👥 팀원 관리</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" x-model="newMember" @keyup.enter="addMember()" placeholder="이름 입력">
+                        <button @click="addMember()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg font-semibold">
+                            추가
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <template x-if="members.length === 0">
+                            <div class="text-center py-8 text-gray-500">
+                                <div class="text-4xl mb-2">👤</div>
+                                <p>팀원을 추가해주세요</p>
+                            </div>
+                        </template>
+                        
+                        <template x-for="(member, index) in members" :key="member.id">
+                            <div class="flex items-center justify-between p-3 bg-dark-700/60 rounded-lg border border-primary-500/20">
+                                <span class="font-medium" x-text="member.name"></span>
+                                <button @click="removeMember(index)" class="text-red-400 hover:text-red-300 text-lg">✕</button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="text-lg font-bold mb-4">📊 히스토리</h3>
+                    <div class="space-y-2 max-h-64 overflow-y-auto">
+                        <template x-if="history.length === 0">
+                            <div class="text-center py-6 text-gray-500 text-sm">
+                                아직 기록이 없습니다
+                            </div>
+                        </template>
+                        <template x-for="(record, index) in history" :key="index">
+                            <div class="p-2 bg-dark-800/60 rounded text-sm">
+                                <span class="font-bold text-amber-400" x-text="record.winner"></span>
+                                <span class="text-gray-400 ml-2" x-text="record.timestamp"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        function meetingRoulette() {
+            return {
+                members: [],
+                newMember: '',
+                isSpinning: false,
+                winner: '',
+                displayName: '?',
+                history: [],
+                
+                init() {
+                    this.loadData();
+                },
+                
+                addMember() {
+                    if (!this.newMember.trim()) return;
+                    this.members.push({ id: Date.now(), name: this.newMember.trim() });
+                    this.newMember = '';
+                    this.saveData();
+                },
+                
+                removeMember(index) {
+                    this.members.splice(index, 1);
+                    this.saveData();
+                },
+                
+                spin() {
+                    if (this.members.length === 0) return;
+                    
+                    this.isSpinning = true;
+                    this.winner = '';
+                    
+                    let counter = 0;
+                    const interval = setInterval(() => {
+                        this.displayName = this.members[Math.floor(Math.random() * this.members.length)].name;
+                        counter++;
+                        if (counter > 30) clearInterval(interval);
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        this.winner = this.members[Math.floor(Math.random() * this.members.length)].name;
+                        this.displayName = this.winner;
+                        this.isSpinning = false;
+                        
+                        this.history.unshift({
+                            winner: this.winner,
+                            timestamp: new Date().toLocaleString('ko-KR')
+                        });
+                        
+                        if (this.history.length > 10) this.history.pop();
+                        this.saveData();
+                    }, 4000);
+                },
+                
+                saveData() {
+                    localStorage.setItem('roulette-data', JSON.stringify({
+                        members: this.members,
+                        history: this.history
+                    }));
+                },
+                
+                loadData() {
+                    const saved = localStorage.getItem('roulette-data');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        this.members = data.members || [];
+                        this.history = data.history || [];
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

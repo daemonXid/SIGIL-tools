@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💸 Expense Splitter | SIGIL TOOLS</title>
+    <meta name="description" content="더치페이 계산기 - 회식/여행 비용을 공평하게 나누고 카톡 공유 메시지 생성">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                        },
+                        dark: {
+                            900: '#050510',
+                            800: '#0a0a1b',
+                            700: '#1a1a2e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #3b82f6);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(99, 102, 241, 0.1);
+            color: #a5b4fc;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+        
+        input, select {
+            background: rgba(10, 10, 27, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            width: 100%;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        
+        .person-card {
+            background: rgba(10, 10, 27, 0.6);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .person-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            background: rgba(10, 10, 27, 0.8);
+        }
+        
+        .result-display {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2));
+            border: 2px solid rgba(16, 185, 129, 0.4);
+            border-radius: 1rem;
+            padding: 2rem;
+        }
+        
+        .amount-display {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .message-box {
+            background: rgba(10, 10, 27, 0.9);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .copy-indicator {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body x-data="expenseSplitter()" x-init="init()">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">💸</span>
+                    <h1 class="text-xl font-bold gradient-text">Expense Splitter</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Input Section -->
+            <div>
+                <!-- Event Info -->
+                <div class="card mb-6">
+                    <h3 class="text-lg font-bold mb-4">📋 정산 정보</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">행사 이름</label>
+                            <input 
+                                type="text" 
+                                x-model="eventName"
+                                placeholder="예: 팀 회식, MT 여행"
+                                @blur="saveData()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">총 금액</label>
+                            <input 
+                                type="number" 
+                                x-model.number="totalAmount"
+                                placeholder="100000"
+                                @input="calculate(); saveData()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Add Person -->
+                <div class="card mb-6">
+                    <h3 class="text-lg font-bold mb-4">👥 참가자 관리</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input 
+                            type="text" 
+                            x-model="newPersonName"
+                            @keyup.enter="addPerson()"
+                            placeholder="이름 입력"
+                            class="flex-1">
+                        <button @click="addPerson()" class="btn-primary px-6">
+                            추가
+                        </button>
+                    </div>
+                    
+                    <!-- Person List -->
+                    <div class="space-y-3">
+                        <template x-if="people.length === 0">
+                            <div class="text-center py-6 text-gray-500">
+                                <div class="text-4xl mb-2">👤</div>
+                                <p class="text-sm">참가자를 추가해주세요</p>
+                            </div>
+                        </template>
+                        
+                        <template x-for="(person, index) in people" :key="person.id">
+                            <div class="person-card">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-2xl">👤</div>
+                                        <div>
+                                            <div class="font-medium" x-text="person.name"></div>
+                                            <div class="text-sm text-gray-400">
+                                                <span x-text="formatCurrency(person.share)"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button @click="removePerson(index)" 
+                                            class="text-red-400 hover:text-red-300 text-lg">
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Quick Add Buttons -->
+                <div class="card">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3">빠른 추가</h4>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="addMultiplePeople(3)" class="btn-secondary text-sm py-2">
+                            👥 3명
+                        </button>
+                        <button @click="addMultiplePeople(4)" class="btn-secondary text-sm py-2">
+                            👥 4명
+                        </button>
+                        <button @click="addMultiplePeople(5)" class="btn-secondary text-sm py-2">
+                            👥 5명
+                        </button>
+                        <button @click="clearAll()" class="btn-secondary text-sm py-2 ml-auto">
+                            🗑️ 전체 초기화
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Result Section -->
+            <div>
+                <!-- Result Display -->
+                <div class="result-display mb-6">
+                    <div class="text-center">
+                        <div class="text-sm text-gray-400 mb-2">1인당 금액</div>
+                        <div class="amount-display" x-text="formatCurrency(perPersonAmount)">
+                            ₩0
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-lg font-bold text-green-400" x-text="people.length">0</div>
+                                <div class="text-xs text-gray-400">참가자</div>
+                            </div>
+                            <div>
+                                <div class="text-lg font-bold text-blue-400" x-text="formatCurrency(totalAmount)">₩0</div>
+                                <div class="text-xs text-gray-400">총액</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Kakao Message -->
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">💬 카톡 공유 메시지</h3>
+                        <button 
+                            @click="copyMessage()"
+                            class="btn-primary text-sm flex items-center gap-2">
+                            <span x-show="!copied">📋 복사</span>
+                            <span x-show="copied" class="copy-indicator">✅ 복사됨!</span>
+                        </button>
+                    </div>
+                    
+                    <div class="message-box" x-text="generatedMessage"></div>
+                    
+                    <div class="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm">
+                        <span class="text-blue-300">💡 Tip:</span>
+                        <span class="text-gray-300 ml-2">메시지를 복사하여 카카오톡에 붙여넣으세요!</span>
+                    </div>
+                </div>
+                
+                <!-- Additional Info -->
+                <div class="card mt-6 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
+                    <h4 class="font-bold mb-3 flex items-center gap-2">
+                        <span>🧮</span>
+                        <span>정산 팁</span>
+                    </h4>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li>• 송금 시 메모에 행사명을 적어주세요</li>
+                        <li>• 반올림 금액으로 송금해도 괜찮아요</li>
+                        <li>• 영수증 사진을 같이 공유하면 투명해요</li>
+                        <li>• 주최자 계좌번호를 메시지에 추가하세요</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Alpine.js App Logic -->
+    <script>
+        function expenseSplitter() {
+            return {
+                eventName: '',
+                totalAmount: 0,
+                people: [],
+                newPersonName: '',
+                copied: false,
+                
+                get perPersonAmount() {
+                    if (this.people.length === 0) return 0;
+                    return Math.ceil(this.totalAmount / this.people.length);
+                },
+                
+                get generatedMessage() {
+                    if (this.people.length === 0) {
+                        return '참가자를 추가하면 메시지가 생성됩니다.';
+                    }
+                    
+                    const title = this.eventName || '정산';
+                    let message = `━━━━━━━━━━━━━━━\n`;
+                    message += `💸 ${title} 정산 안내\n`;
+                    message += `━━━━━━━━━━━━━━━\n\n`;
+                    message += `총 금액: ${this.formatCurrency(this.totalAmount)}\n`;
+                    message += `참가자: ${this.people.length}명\n`;
+                    message += `1인당: ${this.formatCurrency(this.perPersonAmount)}\n\n`;
+                    message += `━━━━━━━━━━━━━━━\n`;
+                    message += `📋 참가자 명단\n`;
+                    message += `━━━━━━━━━━━━━━━\n\n`;
+                    
+                    this.people.forEach((person, index) => {
+                        message += `${index + 1}. ${person.name}\n`;
+                        message += `   ${this.formatCurrency(person.share)}\n\n`;
+                    });
+                    
+                    message += `━━━━━━━━━━━━━━━\n`;
+                    message += `💳 송금 정보\n`;
+                    message += `주최자: (계좌번호 입력)\n`;
+                    message += `메모: ${title}\n`;
+                    message += `━━━━━━━━━━━━━━━\n\n`;
+                    message += `* 송금 완료 시 댓글로 알려주세요!\n`;
+                    message += `* 생성: SIGIL TOOLS 💸`;
+                    
+                    return message;
+                },
+                
+                init() {
+                    this.loadData();
+                },
+                
+                addPerson() {
+                    if (!this.newPersonName.trim()) {
+                        alert('이름을 입력해주세요');
+                        return;
+                    }
+                    
+                    this.people.push({
+                        id: Date.now(),
+                        name: this.newPersonName.trim(),
+                        share: 0
+                    });
+                    
+                    this.newPersonName = '';
+                    this.calculate();
+                    this.saveData();
+                },
+                
+                removePerson(index) {
+                    this.people.splice(index, 1);
+                    this.calculate();
+                    this.saveData();
+                },
+                
+                addMultiplePeople(count) {
+                    for (let i = 0; i < count; i++) {
+                        this.people.push({
+                            id: Date.now() + i,
+                            name: `참가자 ${this.people.length + 1}`,
+                            share: 0
+                        });
+                    }
+                    this.calculate();
+                    this.saveData();
+                },
+                
+                calculate() {
+                    const perPerson = this.perPersonAmount;
+                    this.people.forEach(person => {
+                        person.share = perPerson;
+                    });
+                },
+                
+                formatCurrency(amount) {
+                    return `₩${amount.toLocaleString('ko-KR')}`;
+                },
+                
+                async copyMessage() {
+                    try {
+                        await navigator.clipboard.writeText(this.generatedMessage);
+                        this.copied = true;
+                        setTimeout(() => {
+                            this.copied = false;
+                        }, 2000);
+                    } catch (err) {
+                        alert('복사 실패: ' + err.message);
+                    }
+                },
+                
+                clearAll() {
+                    if (confirm('모든 데이터를 초기화하시겠습니까?')) {
+                        this.eventName = '';
+                        this.totalAmount = 0;
+                        this.people = [];
+                        this.saveData();
+                    }
+                },
+                
+                saveData() {
+                    const data = {
+                        eventName: this.eventName,
+                        totalAmount: this.totalAmount,
+                        people: this.people
+                    };
+                    localStorage.setItem('expense-splitter-data', JSON.stringify(data));
+                },
+                
+                loadData() {
+                    const saved = localStorage.getItem('expense-splitter-data');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        this.eventName = data.eventName || '';
+                        this.totalAmount = data.totalAmount || 0;
+                        this.people = data.people || [];
+                        this.calculate();
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

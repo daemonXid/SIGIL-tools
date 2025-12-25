@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 GPA Calculator | SIGIL TOOLS</title>
+    <meta name="description" content="학점 계산기 - 평점평균(GPA)을 자동으로 계산하고 학기별로 관리합니다">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f4ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        dark: {
+                            900: '#050510',
+                            800: '#0a0a1b',
+                            700: '#1a1a2e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(99, 102, 241, 0.1);
+            color: #a5b4fc;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+        
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #fca5a5;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        input, select {
+            background: rgba(10, 10, 27, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            width: 100%;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        
+        .gpa-display {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+            border: 2px solid rgba(99, 102, 241, 0.4);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .gpa-number {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .semester-tab {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        
+        .semester-tab.active {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+        }
+        
+        .semester-tab:not(.active):hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+    </style>
+</head>
+<body x-data="gpaCalculator()" x-init="init()">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">📊</span>
+                    <h1 class="text-xl font-bold gradient-text">GPA Calculator</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- GPA Display Card -->
+        <div class="gpa-display mb-8">
+            <div class="text-sm text-gray-400 mb-2">현재 학기 평점평균</div>
+            <div class="gpa-number" x-text="currentGPA.toFixed(2)">0.00</div>
+            <div class="text-sm text-gray-400 mt-2">
+                <span x-text="gradeScale"></span> 만점 기준
+            </div>
+            <div class="mt-4 grid grid-cols-3 gap-4 max-w-md mx-auto">
+                <div>
+                    <div class="text-2xl font-bold text-primary-300" x-text="courses.length">0</div>
+                    <div class="text-xs text-gray-400">과목</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-primary-300" x-text="totalCredits">0</div>
+                    <div class="text-xs text-gray-400">총 학점</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-primary-300" x-text="cumulativeGPA.toFixed(2)">0.00</div>
+                    <div class="text-xs text-gray-400">누적 평점</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings -->
+        <div class="card mb-8">
+            <h3 class="text-lg font-bold mb-4">⚙️ 설정</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">학점 체계</label>
+                    <select x-model="gradeScale" @change="saveData()">
+                        <option value="4.5">4.5 만점</option>
+                        <option value="4.3">4.3 만점</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">현재 학기</label>
+                    <input type="text" x-model="currentSemester" @blur="saveData()" placeholder="예: 2024-1">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Semester Tabs -->
+        <div class="mb-6 flex gap-2 overflow-x-auto pb-2">
+            <template x-for="semester in semesters" :key="semester">
+                <button 
+                    @click="selectSemester(semester)"
+                    class="semester-tab whitespace-nowrap"
+                    :class="{ 'active': selectedSemester === semester }"
+                    x-text="semester">
+                </button>
+            </template>
+        </div>
+        
+        <!-- Add Course Form -->
+        <div class="card mb-8">
+            <h3 class="text-lg font-bold mb-4">➕ 과목 추가</h3>
+            <div class="grid md:grid-cols-4 gap-4">
+                <div class="md:col-span-2">
+                    <label class="block text-sm text-gray-400 mb-2">과목명</label>
+                    <input 
+                        type="text" 
+                        x-model="newCourse.name" 
+                        placeholder="예: 자료구조"
+                        @keyup.enter="addCourse()">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">학점</label>
+                    <input 
+                        type="number" 
+                        x-model.number="newCourse.credits" 
+                        placeholder="3"
+                        min="0"
+                        step="0.5"
+                        @keyup.enter="addCourse()">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">성적</label>
+                    <select x-model="newCourse.grade">
+                        <template x-for="grade in gradeOptions" :key="grade.label">
+                            <option :value="grade.value" x-text="grade.label"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+            <button @click="addCourse()" class="btn-primary mt-4 w-full">과목 추가</button>
+        </div>
+        
+        <!-- Courses List -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold">📚 과목 목록</h3>
+                <button @click="clearAllCourses()" class="btn-danger text-sm" x-show="courses.length > 0">
+                    전체 삭제
+                </button>
+            </div>
+            
+            <template x-if="courses.length === 0">
+                <div class="text-center py-12 text-gray-500">
+                    <div class="text-5xl mb-4">📝</div>
+                    <p>과목을 추가해주세요</p>
+                </div>
+            </template>
+            
+            <template x-if="courses.length > 0">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="text-left py-3 px-2 text-sm text-gray-400">과목명</th>
+                                <th class="text-center py-3 px-2 text-sm text-gray-400">학점</th>
+                                <th class="text-center py-3 px-2 text-sm text-gray-400">성적</th>
+                                <th class="text-center py-3 px-2 text-sm text-gray-400">평점</th>
+                                <th class="text-center py-3 px-2 text-sm text-gray-400">삭제</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="(course, index) in courses" :key="index">
+                                <tr class="border-b border-gray-800 hover:bg-white/5 transition-colors">
+                                    <td class="py-3 px-2" x-text="course.name"></td>
+                                    <td class="text-center py-3 px-2" x-text="course.credits"></td>
+                                    <td class="text-center py-3 px-2">
+                                        <span class="px-2 py-1 bg-primary-500/20 text-primary-300 rounded text-sm font-medium"
+                                              x-text="getGradeLabel(course.grade)">
+                                        </span>
+                                    </td>
+                                    <td class="text-center py-3 px-2 font-bold text-primary-300" 
+                                        x-text="(course.grade * course.credits).toFixed(2)">
+                                    </td>
+                                    <td class="text-center py-3 px-2">
+                                        <button @click="removeCourse(index)" 
+                                                class="text-red-400 hover:text-red-300 transition-colors">
+                                            ✕
+                                        </button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
+        </div>
+    </main>
+    
+    <!-- Alpine.js App Logic -->
+    <script>
+        function gpaCalculator() {
+            return {
+                gradeScale: '4.5',
+                currentSemester: '',
+                selectedSemester: '',
+                semesters: [],
+                courses: [],
+                newCourse: {
+                    name: '',
+                    credits: 3,
+                    grade: 4.5
+                },
+                
+                get gradeOptions() {
+                    const scale = parseFloat(this.gradeScale);
+                    if (scale === 4.5) {
+                        return [
+                            { label: 'A+', value: 4.5 },
+                            { label: 'A0', value: 4.0 },
+                            { label: 'B+', value: 3.5 },
+                            { label: 'B0', value: 3.0 },
+                            { label: 'C+', value: 2.5 },
+                            { label: 'C0', value: 2.0 },
+                            { label: 'D+', value: 1.5 },
+                            { label: 'D0', value: 1.0 },
+                            { label: 'F', value: 0.0 }
+                        ];
+                    } else {
+                        return [
+                            { label: 'A+', value: 4.3 },
+                            { label: 'A0', value: 4.0 },
+                            { label: 'A-', value: 3.7 },
+                            { label: 'B+', value: 3.3 },
+                            { label: 'B0', value: 3.0 },
+                            { label: 'B-', value: 2.7 },
+                            { label: 'C+', value: 2.3 },
+                            { label: 'C0', value: 2.0 },
+                            { label: 'C-', value: 1.7 },
+                            { label: 'D+', value: 1.3 },
+                            { label: 'D0', value: 1.0 },
+                            { label: 'F', value: 0.0 }
+                        ];
+                    }
+                },
+                
+                get currentGPA() {
+                    if (this.courses.length === 0) return 0;
+                    const totalPoints = this.courses.reduce((sum, course) => 
+                        sum + (course.grade * course.credits), 0);
+                    const totalCredits = this.totalCredits;
+                    return totalCredits > 0 ? totalPoints / totalCredits : 0;
+                },
+                
+                get totalCredits() {
+                    return this.courses.reduce((sum, course) => sum + course.credits, 0);
+                },
+                
+                get cumulativeGPA() {
+                    // For now, just return current GPA
+                    // TODO: Calculate across all semesters
+                    return this.currentGPA;
+                },
+                
+                init() {
+                    this.loadData();
+                    if (!this.currentSemester) {
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = now.getMonth() + 1;
+                        const semester = month >= 3 && month <= 8 ? 1 : 2;
+                        this.currentSemester = `${year}-${semester}`;
+                    }
+                    if (this.semesters.length === 0) {
+                        this.semesters.push(this.currentSemester);
+                    }
+                    this.selectedSemester = this.currentSemester;
+                },
+                
+                addCourse() {
+                    if (!this.newCourse.name.trim()) {
+                        alert('과목명을 입력해주세요');
+                        return;
+                    }
+                    if (this.newCourse.credits <= 0) {
+                        alert('학점을 올바르게 입력해주세요');
+                        return;
+                    }
+                    
+                    this.courses.push({
+                        name: this.newCourse.name,
+                        credits: this.newCourse.credits,
+                        grade: this.newCourse.grade,
+                        semester: this.selectedSemester
+                    });
+                    
+                    // Reset form
+                    this.newCourse = {
+                        name: '',
+                        credits: 3,
+                        grade: parseFloat(this.gradeScale)
+                    };
+                    
+                    this.saveData();
+                },
+                
+                removeCourse(index) {
+                    if (confirm('이 과목을 삭제하시겠습니까?')) {
+                        this.courses.splice(index, 1);
+                        this.saveData();
+                    }
+                },
+                
+                clearAllCourses() {
+                    if (confirm('모든 과목을 삭제하시겠습니까?')) {
+                        this.courses = [];
+                        this.saveData();
+                    }
+                },
+                
+                selectSemester(semester) {
+                    this.selectedSemester = semester;
+                    this.loadData();
+                },
+                
+                getGradeLabel(value) {
+                    const grade = this.gradeOptions.find(g => g.value === value);
+                    return grade ? grade.label : '-';
+                },
+                
+                saveData() {
+                    const data = {
+                        gradeScale: this.gradeScale,
+                        currentSemester: this.currentSemester,
+                        semesters: this.semesters,
+                        courses: this.courses
+                    };
+                    localStorage.setItem('gpa-data', JSON.stringify(data));
+                },
+                
+                loadData() {
+                    const saved = localStorage.getItem('gpa-data');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        this.gradeScale = data.gradeScale || '4.5';
+                        this.currentSemester = data.currentSemester || '';
+                        this.semesters = data.semesters || [];
+                        this.courses = (data.courses || []).filter(c => 
+                            c.semester === this.selectedSemester
+                        );
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ SIGIL Liquid Effect | Standalone Component</title>
+    <meta name="description" content="Standalone interactive liquid effect using Canvas API">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #050510;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        #liquid-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            cursor: crosshair;
+        }
+        
+        .info-badge {
+            position: fixed;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            color: #a1a1aa;
+            font-size: 0.875rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+            text-align: center;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .control-label {
+            color: #a1a1aa;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .color-btn:hover {
+            transform: scale(1.1);
+            border-color: white;
+        }
+        
+        .color-btn.active {
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+        
+        @media (max-width: 640px) {
+            .info-badge {
+                top: 1rem;
+                font-size: 0.75rem;
+                padding: 0.5rem 1rem;
+            }
+            
+            .controls {
+                bottom: 1rem;
+                padding: 0.75rem 1rem;
+                gap: 0.5rem;
+            }
+            
+            .color-btn {
+                width: 32px;
+                height: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="liquid-canvas"></canvas>
+    
+    <div class="info-badge">
+        <span class="gradient-text">✨ SIGIL Liquid Effect</span>
+        <div style="font-size: 0.7rem; margin-top: 0.25rem;">마우스를 움직여 보세요</div>
+    </div>
+    
+    <div class="controls">
+        <div class="control-item">
+            <div class="control-label">Color</div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="color-btn active" style="background: linear-gradient(135deg, #6366f1, #a855f7);" onclick="setColor(0)"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #ec4899, #f43f5e);" onclick="setColor(1)"></button>
+                <button class="color-btn" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);" onclick="setColor(2)"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ========================================
+           SIGIL Liquid Effect Engine
+           Pure Canvas-based interactive fluid
+           ======================================== */
+        
+        const canvas = document.getElementById('liquid-canvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+        
+        // Configuration
+        const CONFIG = {
+            particlesPerMove: 3,
+            maxParticles: 150,
+            baseSize: 20,
+            sizeVariation: 40,
+            growthRate: 0.5,
+            fadeRate: 0.005,
+            baseOpacity: 0.6,
+            colors: [
+                { primary: '#6366f1', secondary: '#a855f7' },
+                { primary: '#ec4899', secondary: '#f43f5e' },
+                { primary: '#06b6d4', secondary: '#3b82f6' }
+            ],
+            currentColorIndex: 0
+        };
+        
+        let points = [];
+        let mouse = { x: -1000, y: -1000 };
+        
+        // Canvas resize handler
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        
+        // Mouse tracking
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            
+            const colorScheme = CONFIG.colors[CONFIG.currentColorIndex];
+            
+            for(let i = 0; i < CONFIG.particlesPerMove; i++) {
+                points.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: Math.random() * CONFIG.sizeVariation + CONFIG.baseSize,
+                    opacity: CONFIG.baseOpacity,
+                    color: i % 2 === 0 ? colorScheme.primary : colorScheme.secondary
+                });
+            }
+            
+            if (points.length > CONFIG.maxParticles) {
+                points.splice(0, CONFIG.particlesPerMove);
+            }
+        });
+        
+        // Touch support
+        window.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const event = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            window.dispatchEvent(event);
+        }, { passive: false });
+        
+        // Animation loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            points.forEach((p, i) => {
+                // Physics
+                p.x += p.vx;
+                p.y += p.vy;
+                p.size += CONFIG.growthRate;
+                p.opacity -= CONFIG.fadeRate;
+                
+                // Remove dead particles
+                if (p.opacity <= 0) {
+                    points.splice(i, 1);
+                    return;
+                }
+                
+                // Render
+                ctx.beginPath();
+                const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                const hexOpacity = Math.floor(p.opacity * 255).toString(16).padStart(2, '0');
+                gradient.addColorStop(0, p.color + hexOpacity);
+                gradient.addColorStop(1, p.color + '00');
+                ctx.fillStyle = gradient;
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Color switcher
+        function setColor(index) {
+            CONFIG.currentColorIndex = index;
+            document.querySelectorAll('.color-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+        }
+        
+        // Start
+        animate();
+    </script>
+</body>
+</html>

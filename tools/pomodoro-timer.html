@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍅 Pomodoro Timer | SIGIL TOOLS</title>
+    <meta name="description" content="뽀모도로 타이머 - 할 일 목록과 집중 시간을 함께 관리하는 생산성 도구">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                        },
+                        tomato: {
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        },
+                        dark: {
+                            900: '#050510',
+                            800: '#0a0a1b',
+                            700: '#1a1a2e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #ef4444, #f97316, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        
+        .timer-circle {
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(249, 115, 22, 0.2));
+            border: 4px solid rgba(239, 68, 68, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .timer-circle.active {
+            animation: pulse 2s infinite;
+            border-color: #ef4444;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% { 
+                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            }
+        }
+        
+        .timer-display {
+            font-size: 4rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            color: white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(99, 102, 241, 0.1);
+            color: #a5b4fc;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(99, 102, 241, 0.2);
+        }
+        
+        .task-item {
+            background: rgba(10, 10, 27, 0.6);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .task-item:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(10, 10, 27, 0.8);
+        }
+        
+        .task-item.completed {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        
+        input[type="text"], input[type="number"] {
+            background: rgba(10, 10, 27, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            width: 100%;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444, #f97316);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body x-data="pomodoroTimer()" x-init="init()">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🍅</span>
+                    <h1 class="text-xl font-bold gradient-text">Pomodoro Timer</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Timer Section -->
+            <div>
+                <!-- Timer Display -->
+                <div class="flex justify-center mb-8">
+                    <div class="timer-circle" :class="{ 'active': isRunning }">
+                        <div class="timer-display" x-text="displayTime">25:00</div>
+                    </div>
+                </div>
+                
+                <!-- Timer Controls -->
+                <div class="card mb-6">
+                    <div class="flex gap-4 justify-center mb-6">
+                        <button @click="toggleTimer()" class="btn-primary text-lg">
+                            <span x-text="isRunning ? '⏸ 일시정지' : '▶️ 시작'"></span>
+                        </button>
+                        <button @click="resetTimer()" class="btn-secondary">
+                            🔄 리셋
+                        </button>
+                    </div>
+                    
+                    <!-- Mode Selector -->
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <button 
+                            @click="setMode('work')"
+                            class="py-3 rounded-lg font-medium transition-all"
+                            :class="mode === 'work' ? 'bg-gradient-to-r from-tomato-500 to-orange-500 text-white' : 'bg-dark-700 text-gray-400'">
+                            🔥 집중
+                        </button>
+                        <button 
+                            @click="setMode('short')"
+                            class="py-3 rounded-lg font-medium transition-all"
+                            :class="mode === 'short' ? 'bg-gradient-to-r from-primary-500 to-purple-500 text-white' : 'bg-dark-700 text-gray-400'">
+                            ☕ 짧은 휴식
+                        </button>
+                        <button 
+                            @click="setMode('long')"
+                            class="py-3 rounded-lg font-medium transition-all"
+                            :class="mode === 'long' ? 'bg-gradient-to-r from-green-500 to-teal-500 text-white' : 'bg-dark-700 text-gray-400'">
+                            🌴 긴 휴식
+                        </button>
+                    </div>
+                    
+                    <!-- Settings -->
+                    <div class="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-700">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">집중 시간</label>
+                            <input 
+                                type="number" 
+                                x-model.number="settings.workDuration" 
+                                @change="saveSettings()"
+                                min="1" max="60"
+                                class="text-center">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">짧은 휴식</label>
+                            <input 
+                                type="number" 
+                                x-model.number="settings.shortBreak" 
+                                @change="saveSettings()"
+                                min="1" max="30"
+                                class="text-center">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">긴 휴식</label>
+                            <input 
+                                type="number" 
+                                x-model.number="settings.longBreak" 
+                                @change="saveSettings()"
+                                min="1" max="60"
+                                class="text-center">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistics -->
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="stat-card">
+                        <div class="text-3xl font-bold gradient-text" x-text="stats.sessionsToday">0</div>
+                        <div class="text-xs text-gray-400 mt-2">오늘 세션</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="text-3xl font-bold gradient-text" x-text="stats.totalMinutes">0</div>
+                        <div class="text-xs text-gray-400 mt-2">총 집중 분</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="text-3xl font-bold gradient-text" x-text="stats.streak">0</div>
+                        <div class="text-xs text-gray-400 mt-2">연속 일수</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Task List Section -->
+            <div>
+                <div class="card mb-6">
+                    <h3 class="text-lg font-bold mb-4">📝 오늘 할 일</h3>
+                    
+                    <!-- Add Task Form -->
+                    <div class="flex gap-2 mb-6">
+                        <input 
+                            type="text" 
+                            x-model="newTaskText"
+                            @keyup.enter="addTask()"
+                            placeholder="새 작업 추가..."
+                            class="flex-1">
+                        <button @click="addTask()" class="btn-primary px-6">
+                            추가
+                        </button>
+                    </div>
+                    
+                    <!-- Task List -->
+                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                        <template x-if="tasks.length === 0">
+                            <div class="text-center py-8 text-gray-500">
+                                <div class="text-4xl mb-3">✅</div>
+                                <p>할 일을 추가해보세요</p>
+                            </div>
+                        </template>
+                        
+                        <template x-for="(task, index) in tasks" :key="task.id">
+                            <div class="task-item" :class="{ 'completed': task.completed }">
+                                <div class="flex items-start gap-3">
+                                    <input 
+                                        type="checkbox" 
+                                        :checked="task.completed"
+                                        @change="toggleTask(index)"
+                                        class="mt-1 w-5 h-5 cursor-pointer">
+                                    <div class="flex-1">
+                                        <div class="font-medium" x-text="task.text"></div>
+                                        <div class="text-xs text-gray-400 mt-1" x-show="task.pomodoroCount > 0">
+                                            🍅 <span x-text="task.pomodoroCount"></span> 세션 완료
+                                        </div>
+                                        <!-- Progress Bar -->
+                                        <div class="progress-bar mt-2" x-show="task.pomodoroCount > 0">
+                                            <div class="progress-fill" 
+                                                 :style="`width: ${Math.min(task.pomodoroCount / 4 * 100, 100)}%`">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button @click="removeTask(index)" 
+                                            class="text-red-400 hover:text-red-300 text-lg">
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Tips -->
+                <div class="card bg-gradient-to-br from-tomato-500/10 to-orange-500/10 border-tomato-500/30">
+                    <h4 class="font-bold mb-3 flex items-center gap-2">
+                        <span>💡</span>
+                        <span>뽀모도로 기법이란?</span>
+                    </h4>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li>• 25분 집중 → 5분 휴식 반복</li>
+                        <li>• 4회 반복 후 15-30분 긴 휴식</li>
+                        <li>• 집중력 향상 & 번아웃 방지</li>
+                        <li>• 작업을 작은 단위로 분할</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Alpine.js App Logic -->
+    <script>
+        function pomodoroTimer() {
+            return {
+                mode: 'work', // 'work', 'short', 'long'
+                timeLeft: 25 * 60, // seconds
+                isRunning: false,
+                interval: null,
+                
+                settings: {
+                    workDuration: 25,
+                    shortBreak: 5,
+                    longBreak: 15
+                },
+                
+                stats: {
+                    sessionsToday: 0,
+                    totalMinutes: 0,
+                    streak: 0
+                },
+                
+                tasks: [],
+                newTaskText: '',
+                
+                get displayTime() {
+                    const minutes = Math.floor(this.timeLeft / 60);
+                    const seconds = this.timeLeft % 60;
+                    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                },
+                
+                init() {
+                    this.loadSettings();
+                    this.loadTasks();
+                    this.loadStats();
+                    this.resetTimer();
+                    
+                    // Request notification permission
+                    if ('Notification' in window && Notification.permission === 'default') {
+                        Notification.requestPermission();
+                    }
+                },
+                
+                toggleTimer() {
+                    if (this.isRunning) {
+                        this.pause();
+                    } else {
+                        this.start();
+                    }
+                },
+                
+                start() {
+                    this.isRunning = true;
+                    this.interval = setInterval(() => {
+                        if (this.timeLeft > 0) {
+                            this.timeLeft--;
+                        } else {
+                            this.complete();
+                        }
+                    }, 1000);
+                },
+                
+                pause() {
+                    this.isRunning = false;
+                    if (this.interval) {
+                        clearInterval(this.interval);
+                        this.interval = null;
+                    }
+                },
+                
+                resetTimer() {
+                    this.pause();
+                    if (this.mode === 'work') {
+                        this.timeLeft = this.settings.workDuration * 60;
+                    } else if (this.mode === 'short') {
+                        this.timeLeft = this.settings.shortBreak * 60;
+                    } else {
+                        this.timeLeft = this.settings.longBreak * 60;
+                    }
+                },
+                
+                setMode(newMode) {
+                    this.mode = newMode;
+                    this.resetTimer();
+                },
+                
+                complete() {
+                    this.pause();
+                    
+                    // Update stats
+                    if (this.mode === 'work') {
+                        this.stats.sessionsToday++;
+                        this.stats.totalMinutes += this.settings.workDuration;
+                        this.saveStats();
+                        
+                        // Increment active task pomodoro count
+                        const activeTask = this.tasks.find(t => !t.completed);
+                        if (activeTask) {
+                            activeTask.pomodoroCount = (activeTask.pomodoroCount || 0) + 1;
+                            this.saveTasks();
+                        }
+                    }
+                    
+                    // Show notification
+                    this.notify();
+                    
+                    // Auto-switch mode
+                    if (this.mode === 'work') {
+                        this.setMode(this.stats.sessionsToday % 4 === 0 ? 'long' : 'short');
+                    } else {
+                        this.setMode('work');
+                    }
+                },
+                
+                notify() {
+                    const messages = {
+                        work: '🎉 잘했어요! 휴식 시간입니다.',
+                        short: '💪 다시 집중할 시간입니다!',
+                        long: '🔥 충분히 휴식했어요. 다시 시작해볼까요?'
+                    };
+                    
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('Pomodoro Timer', {
+                            body: messages[this.mode],
+                            icon: '🍅'
+                        });
+                    }
+                    
+                    // Play sound (optional)
+                    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFAo=');
+                    audio.play().catch(() => {});
+                },
+                
+                addTask() {
+                    if (!this.newTaskText.trim()) return;
+                    
+                    this.tasks.push({
+                        id: Date.now(),
+                        text: this.newTaskText,
+                        completed: false,
+                        pomodoroCount: 0
+                    });
+                    
+                    this.newTaskText = '';
+                    this.saveTasks();
+                },
+                
+                toggleTask(index) {
+                    this.tasks[index].completed = !this.tasks[index].completed;
+                    this.saveTasks();
+                },
+                
+                removeTask(index) {
+                    this.tasks.splice(index, 1);
+                    this.saveTasks();
+                },
+                
+                saveSettings() {
+                    localStorage.setItem('pomodoro-settings', JSON.stringify(this.settings));
+                    this.resetTimer();
+                },
+                
+                loadSettings() {
+                    const saved = localStorage.getItem('pomodoro-settings');
+                    if (saved) {
+                        this.settings = JSON.parse(saved);
+                    }
+                },
+                
+                saveTasks() {
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(this.tasks));
+                },
+                
+                loadTasks() {
+                    const saved = localStorage.getItem('pomodoro-tasks');
+                    if (saved) {
+                        this.tasks = JSON.parse(saved);
+                    }
+                },
+                
+                saveStats() {
+                    localStorage.setItem('pomodoro-stats', JSON.stringify(this.stats));
+                },
+                
+                loadStats() {
+                    const saved = localStorage.getItem('pomodoro-stats');
+                    if (saved) {
+                        this.stats = JSON.parse(saved);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

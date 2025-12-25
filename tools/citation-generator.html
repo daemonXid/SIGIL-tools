@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📖 Citation Generator | SIGIL TOOLS</title>
+    <meta name="description" content="인용구 생성기 - APA, MLA, Chicago 양식의 참고문헌을 자동으로 생성">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 500: '#6366f1', 600: '#4f46e5' },
+                        dark: { 900: '#050510', 800: '#0a0a1b', 700: '#1a1a2e' }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #050510 0%, #0a0a1b 50%, #1a1a2e 100%);
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+        input, select {
+            background: rgba(10, 10, 27, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            width: 100%;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        .citation-output {
+            background: rgba(10, 10, 27, 0.9);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            font-family: 'Georgia', serif;
+            line-height: 1.8;
+        }
+        .style-tab {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .style-tab.active {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+        }
+        .style-tab:not(.active):hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+    </style>
+</head>
+<body x-data="citationGenerator()">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+        <nav class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <a href="../index.html" class="flex items-center gap-3 text-gray-400 hover:text-white transition-colors">
+                    <span class="text-2xl">←</span>
+                    <span class="font-medium">홈으로</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">📖</span>
+                    <h1 class="text-xl font-bold gradient-text">Citation Generator</h1>
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Style Selector -->
+        <div class="flex gap-3 mb-6 overflow-x-auto pb-2">
+            <template x-for="style in styles" :key="style.id">
+                <button 
+                    @click="selectedStyle = style.id"
+                    class="style-tab whitespace-nowrap"
+                    :class="{ 'active': selectedStyle === style.id }"
+                    x-text="style.name">
+                </button>
+            </template>
+        </div>
+        
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Input Section -->
+            <div>
+                <!-- Source Type -->
+                <div class="card mb-6">
+                    <h3 class="text-lg font-bold mb-4">📚 자료 유형</h3>
+                    <select x-model="sourceType" @change="clearForm()">
+                        <option value="book">책 (Book)</option>
+                        <option value="journal">학술지 논문 (Journal Article)</option>
+                        <option value="website">웹사이트 (Website)</option>
+                        <option value="newspaper">신문 기사 (Newspaper)</option>
+                    </select>
+                </div>
+                
+                <!-- Book Form -->
+                <div class="card" x-show="sourceType === 'book'">
+                    <h3 class="text-lg font-bold mb-4">✍️ 책 정보</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">저자명 (성, 이름)</label>
+                            <input type="text" x-model="bookData.author" placeholder="Smith, John" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">출판 연도</label>
+                            <input type="text" x-model="bookData.year" placeholder="2023" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">책 제목</label>
+                            <input type="text" x-model="bookData.title" placeholder="Book Title" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">출판사</label>
+                            <input type="text" x-model="bookData.publisher" placeholder="Publisher Name" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">출판지 (선택)</label>
+                            <input type="text" x-model="bookData.place" placeholder="New York" @input="generate()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Journal Form -->
+                <div class="card" x-show="sourceType === 'journal'">
+                    <h3 class="text-lg font-bold mb-4">📄 논문 정보</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">저자명</label>
+                            <input type="text" x-model="journalData.author" placeholder="Smith, J." @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">발행 연도</label>
+                            <input type="text" x-model="journalData.year" placeholder="2023" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">논문 제목</label>
+                            <input type="text" x-model="journalData.title" placeholder="Article Title" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">학술지명</label>
+                            <input type="text" x-model="journalData.journal" placeholder="Journal Name" @input="generate()">
+                        </div>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">권 (Volume)</label>
+                                <input type="text" x-model="journalData.volume" placeholder="10" @input="generate()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">호 (Issue)</label>
+                                <input type="text" x-model="journalData.issue" placeholder="2" @input="generate()">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-2">페이지</label>
+                                <input type="text" x-model="journalData.pages" placeholder="123-456" @input="generate()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Website Form -->
+                <div class="card" x-show="sourceType === 'website'">
+                    <h3 class="text-lg font-bold mb-4">🌐 웹사이트 정보</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">저자/기관명</label>
+                            <input type="text" x-model="websiteData.author" placeholder="Author/Organization" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">발행 연도</label>
+                            <input type="text" x-model="websiteData.year" placeholder="2023" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">페이지 제목</label>
+                            <input type="text" x-model="websiteData.title" placeholder="Page Title" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">웹사이트명</label>
+                            <input type="text" x-model="websiteData.website" placeholder="Website Name" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">URL</label>
+                            <input type="url" x-model="websiteData.url" placeholder="https://example.com" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">접속일</label>
+                            <input type="date" x-model="websiteData.accessDate" @input="generate()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Newspaper Form -->
+                <div class="card" x-show="sourceType === 'newspaper'">
+                    <h3 class="text-lg font-bold mb-4">📰 신문 기사 정보</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">저자명</label>
+                            <input type="text" x-model="newspaperData.author" placeholder="Smith, J." @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">발행일</label>
+                            <input type="date" x-model="newspaperData.date" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">기사 제목</label>
+                            <input type="text" x-model="newspaperData.title" placeholder="Article Title" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">신문명</label>
+                            <input type="text" x-model="newspaperData.newspaper" placeholder="The New York Times" @input="generate()">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">페이지 (선택)</label>
+                            <input type="text" x-model="newspaperData.pages" placeholder="A1" @input="generate()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Output Section -->
+            <div>
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold">📋 생성된 인용구</h3>
+                        <button @click="copyCitation()" class="btn-primary text-sm flex items-center gap-2">
+                            <span x-show="!copied">📋 복사</span>
+                            <span x-show="copied">✅ 복사됨!</span>
+                        </button>
+                    </div>
+                    
+                    <div class="citation-output" x-html="generatedCitation || '<span class=\'text-gray-500\'>정보를 입력하면 인용구가 생성됩니다.</span>'"></div>
+                    
+                    <div class="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                        <div class="font-bold text-blue-300 mb-2">📌 현재 양식: <span x-text="getCurrentStyleName()"></span></div>
+                        <div class="text-sm text-gray-400">
+                            <span x-show="selectedStyle === 'apa'">APA 7th Edition (American Psychological Association)</span>
+                            <span x-show="selectedStyle === 'mla'">MLA 9th Edition (Modern Language Association)</span>
+                            <span x-show="selectedStyle === 'chicago'">Chicago 17th Edition (Notes-Bibliography)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tips -->
+                <div class="card mt-6 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
+                    <h4 class="font-bold mb-3">💡 인용 팁</h4>
+                    <ul class="text-sm text-gray-300 space-y-2">
+                        <li>• 저자명은 "성, 이름" 형식으로 입력하세요</li>
+                        <li>• 복수 저자는 세미콜론(;)으로 구분하세요</li>
+                        <li>• 이탤릭체 제목은 기울임꼴로 표시됩니다</li>
+                        <li>• 웹사이트는 접속일을 반드시 기록하세요</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        function citationGenerator() {
+            return {
+                selectedStyle: 'apa',
+                sourceType: 'book',
+                generatedCitation: '',
+                copied: false,
+                
+                styles: [
+                    { id: 'apa', name: 'APA 7th' },
+                    { id: 'mla', name: 'MLA 9th' },
+                    { id: 'chicago', name: 'Chicago 17th' }
+                ],
+                
+                bookData: { author: '', year: '', title: '', publisher: '', place: '' },
+                journalData: { author: '', year: '', title: '', journal: '', volume: '', issue: '', pages: '' },
+                websiteData: { author: '', year: '', title: '', website: '', url: '', accessDate: '' },
+                newspaperData: { author: '', date: '', title: '', newspaper: '', pages: '' },
+                
+                getCurrentStyleName() {
+                    return this.styles.find(s => s.id === this.selectedStyle)?.name || '';
+                },
+                
+                clearForm() {
+                    this.bookData = { author: '', year: '', title: '', publisher: '', place: '' };
+                    this.journalData = { author: '', year: '', title: '', journal: '', volume: '', issue: '', pages: '' };
+                    this.websiteData = { author: '', year: '', title: '', website: '', url: '', accessDate: '' };
+                    this.newspaperData = { author: '', date: '', title: '', newspaper: '', pages: '' };
+                    this.generatedCitation = '';
+                },
+                
+                generate() {
+                    if (this.sourceType === 'book') this.generateBook();
+                    else if (this.sourceType === 'journal') this.generateJournal();
+                    else if (this.sourceType === 'website') this.generateWebsite();
+                    else if (this.sourceType === 'newspaper') this.generateNewspaper();
+                },
+                
+                generateBook() {
+                    const { author, year, title, publisher, place } = this.bookData;
+                    if (!author || !year || !title || !publisher) {
+                        this.generatedCitation = '';
+                        return;
+                    }
+                    
+                    if (this.selectedStyle === 'apa') {
+                        this.generatedCitation = `${author} (${year}). <em>${title}</em>. ${publisher}.`;
+                    } else if (this.selectedStyle === 'mla') {
+                        this.generatedCitation = `${author}. <em>${title}</em>. ${publisher}, ${year}.`;
+                    } else if (this.selectedStyle === 'chicago') {
+                        this.generatedCitation = `${author}. <em>${title}</em>. ${place ? place + ': ' : ''}${publisher}, ${year}.`;
+                    }
+                },
+                
+                generateJournal() {
+                    const { author, year, title, journal, volume, issue, pages } = this.journalData;
+                    if (!author || !year || !title || !journal) {
+                        this.generatedCitation = '';
+                        return;
+                    }
+                    
+                    if (this.selectedStyle === 'apa') {
+                        this.generatedCitation = `${author} (${year}). ${title}. <em>${journal}</em>`;
+                        if (volume) this.generatedCitation += `, <em>${volume}</em>`;
+                        if (issue) this.generatedCitation += `(${issue})`;
+                        if (pages) this.generatedCitation += `, ${pages}`;
+                        this.generatedCitation += '.';
+                    } else if (this.selectedStyle === 'mla') {
+                        this.generatedCitation = `${author}. "${title}." <em>${journal}</em>`;
+                        if (volume) this.generatedCitation += `, vol. ${volume}`;
+                        if (issue) this.generatedCitation += `, no. ${issue}`;
+                        this.generatedCitation += `, ${year}`;
+                        if (pages) this.generatedCitation += `, pp. ${pages}`;
+                        this.generatedCitation += '.';
+                    } else if (this.selectedStyle === 'chicago') {
+                        this.generatedCitation = `${author}. "${title}." <em>${journal}</em> ${volume}`;
+                        if (issue) this.generatedCitation += `, no. ${issue}`;
+                        this.generatedCitation += ` (${year})`;
+                        if (pages) this.generatedCitation += `: ${pages}`;
+                        this.generatedCitation += '.';
+                    }
+                },
+                
+                generateWebsite() {
+                    const { author, year, title, website, url, accessDate } = this.websiteData;
+                    if (!author || !title || !url) {
+                        this.generatedCitation = '';
+                        return;
+                    }
+                    
+                    const accessFormatted = accessDate ? new Date(accessDate).toLocaleDateString('ko-KR') : '';
+                    
+                    if (this.selectedStyle === 'apa') {
+                        this.generatedCitation = `${author}. (${year || 'n.d.'}). ${title}. `;
+                        if (website) this.generatedCitation += `<em>${website}</em>. `;
+                        this.generatedCitation += `${url}`;
+                    } else if (this.selectedStyle === 'mla') {
+                        this.generatedCitation = `${author}. "${title}." `;
+                        if (website) this.generatedCitation += `<em>${website}</em>, `;
+                        if (year) this.generatedCitation += `${year}, `;
+                        this.generatedCitation += `${url}`;
+                        if (accessDate) this.generatedCitation += `. Accessed ${accessFormatted}`;
+                        this.generatedCitation += '.';
+                    } else if (this.selectedStyle === 'chicago') {
+                        this.generatedCitation = `${author}. "${title}." `;
+                        if (website) this.generatedCitation += `<em>${website}</em>. `;
+                        if (year) this.generatedCitation += `${year}. `;
+                        this.generatedCitation += `${url}`;
+                        if (accessDate) this.generatedCitation += ` (accessed ${accessFormatted})`;
+                        this.generatedCitation += '.';
+                    }
+                },
+                
+                generateNewspaper() {
+                    const { author, date, title, newspaper, pages } = this.newspaperData;
+                    if (!author || !date || !title || !newspaper) {
+                        this.generatedCitation = '';
+                        return;
+                    }
+                    
+                    const dateObj = new Date(date);
+                    const year = dateObj.getFullYear();
+                    const month = dateObj.toLocaleDateString('en-US', { month: 'long' });
+                    const day = dateObj.getDate();
+                    
+                    if (this.selectedStyle === 'apa') {
+                        this.generatedCitation = `${author} (${year}, ${month} ${day}). ${title}. <em>${newspaper}</em>`;
+                        if (pages) this.generatedCitation += `, ${pages}`;
+                        this.generatedCitation += '.';
+                    } else if (this.selectedStyle === 'mla') {
+                        this.generatedCitation = `${author}. "${title}." <em>${newspaper}</em>, ${day} ${month} ${year}`;
+                        if (pages) this.generatedCitation += `, ${pages}`;
+                        this.generatedCitation += '.';
+                    } else if (this.selectedStyle === 'chicago') {
+                        this.generatedCitation = `${author}. "${title}." <em>${newspaper}</em>, ${month} ${day}, ${year}`;
+                        if (pages) this.generatedCitation += `, ${pages}`;
+                        this.generatedCitation += '.';
+                    }
+                },
+                
+                async copyCitation() {
+                    if (!this.generatedCitation) return;
+                    
+                    const textOnly = this.generatedCitation.replace(/<[^>]*>/g, '');
+                    try {
+                        await navigator.clipboard.writeText(textOnly);
+                        this.copied = true;
+                        setTimeout(() => { this.copied = false; }, 2000);
+                    } catch (err) {
+                        alert('복사 실패: ' + err.message);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

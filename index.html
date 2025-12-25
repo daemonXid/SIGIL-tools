@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛠️ SIGIL TOOLS | AI-Powered Web Tools</title>
+    <meta name="description" content="Free, privacy-first web tools powered by AI - PDF Converter, Background Remover, and more">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f4ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        },
+                        dark: {
+                            900: '#050510',
+                            800: '#0a0a1b',
+                            700: '#1a1a2e',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #050510;
+            color: #e5e7eb;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* ========================================
+           LIQUID EFFECT BACKGROUND (Embedded)
+           ======================================== */
+        #liquid-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* ========================================
+           HERO SECTION STYLING
+           ======================================== */
+        .hero-gradient {
+            background: linear-gradient(180deg, 
+                rgba(99, 102, 241, 0.1) 0%,
+                rgba(168, 85, 247, 0.05) 50%,
+                rgba(5, 5, 16, 0) 100%
+            );
+        }
+        
+        .tool-card {
+            background: rgba(26, 26, 46, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 20px 60px rgba(99, 102, 241, 0.3);
+        }
+        
+        .tool-icon {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 3rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .tool-card:hover .tool-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.5);
+        }
+        
+        .feature-badge {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            color: #a5b4fc;
+        }
+        
+        /* ========================================
+           STATUS INDICATOR
+           ======================================== */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* ========================================
+           RESPONSIVE DESIGN
+           ======================================== */
+        @media (max-width: 768px) {
+            .tool-card {
+                margin-bottom: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body x-data="toolsApp()">
+    <!-- Liquid Effect Background Canvas -->
+    <canvas id="liquid-canvas"></canvas>
+    
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        <!-- Header Navigation -->
+        <header class="fixed top-0 left-0 right-0 z-50 backdrop-blur-lg bg-dark-900/80 border-b border-white/10">
+            <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">🛠️</span>
+                        <div>
+                            <h1 class="text-xl font-bold gradient-text">SIGIL TOOLS</h1>
+                            <div class="flex items-center gap-2 text-xs text-gray-400">
+                                <div class="status-dot"></div>
+                                <span>All Systems Operational</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <span class="feature-badge hidden sm:inline">🔒 100% Privacy-First</span>
+                        <a href="https://github.com" target="_blank" 
+                           class="text-gray-400 hover:text-white transition-colors">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        
+        <!-- Hero Section -->
+        <section class="hero-gradient min-h-screen pt-32 pb-20 px-4">
+            <div class="max-w-7xl mx-auto">
+                <!-- Hero Content -->
+                <div class="text-center mb-16">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500/10 border border-primary-500/30 rounded-full mb-6">
+                        <span class="text-2xl">✨</span>
+                        <span class="text-sm font-medium text-primary-300">AI-Powered Free Tools</span>
+                    </div>
+                    
+                    <h2 class="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6">
+                        Web Tools,<br>
+                        <span class="gradient-text">Reimagined</span>
+                    </h2>
+                    
+                    <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
+                        프라이버시를 지키며 사용하는 무료 웹 도구 모음.<br>
+                        모든 처리는 브라우저에서, 데이터는 서버로 전송되지 않습니다.
+                    </p>
+                    
+                    <div class="flex flex-wrap gap-4 justify-center">
+                        <button @click="scrollToTools" class="btn-primary">
+                            🚀 도구 둘러보기
+                        </button>
+                        <button class="px-8 py-4 border-2 border-primary-500/50 rounded-xl font-semibold hover:bg-primary-500/10 transition-all">
+                            📖 사용 가이드
+                        </button>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto mt-16">
+                        <div class="text-center">
+                            <div class="text-3xl font-bold gradient-text" x-text="stats.total">0</div>
+                            <div class="text-sm text-gray-400 mt-1">Available Tools</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold gradient-text">100%</div>
+                            <div class="text-sm text-gray-400 mt-1">Free Forever</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold gradient-text">0</div>
+                            <div class="text-sm text-gray-400 mt-1">Servers Used</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-3xl font-bold gradient-text">∞</div>
+                            <div class="text-sm text-gray-400 mt-1">Privacy Level</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Category Filter & Search -->
+                <div id="tools-section" class="mb-12">
+                    <!-- Search Bar -->
+                    <div class="max-w-2xl mx-auto mb-8">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                x-model="searchQuery"
+                                placeholder="🔍 도구 검색 (예: 학점, 타이머, 이미지...)"
+                                class="w-full px-6 py-4 bg-dark-700/80 backdrop-blur-lg border border-primary-500/30 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 transition-all"
+                            >
+                            <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm"
+                                 x-show="searchQuery"
+                                 @click="searchQuery = ''"
+                                 class="cursor-pointer hover:text-white">
+                                ✕
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Category Pills -->
+                    <div class="flex flex-wrap gap-3 justify-center mb-8">
+                        <template x-for="cat in categories" :key="cat.id">
+                            <button 
+                                @click="selectCategory(cat.id)"
+                                class="px-6 py-3 rounded-xl font-medium transition-all"
+                                :class="selectedCategory === cat.id ? 
+                                    'bg-gradient-to-r from-primary-500 to-purple-500 text-white shadow-lg' : 
+                                    'bg-dark-700/80 text-gray-300 hover:bg-dark-700 border border-primary-500/20'"
+                            >
+                                <span x-text="cat.icon"></span>
+                                <span class="ml-2" x-text="cat.name"></span>
+                            </button>
+                        </template>
+                    </div>
+                    
+                    <!-- Results Count -->
+                    <div class="text-center text-gray-400 text-sm mb-6">
+                        <span x-text="filteredTools.length"></span>개의 도구
+                    </div>
+                </div>
+                
+                <!-- Tools Grid -->
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-20">
+                    <template x-for="tool in filteredTools" :key="tool.id">
+                        <div class="tool-card rounded-2xl p-8 cursor-pointer"
+                             @click="openTool(tool.id)">
+                            <!-- Icon -->
+                            <div class="tool-icon mb-4" x-text="tool.icon"></div>
+                            
+                            <!-- Title & Status -->
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-2xl font-bold text-white" x-text="tool.nameKo"></h3>
+                                <span class="px-2 py-1 text-xs rounded-full"
+                                      :class="tool.status === 'live' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'"
+                                      x-text="tool.status === 'live' ? 'Live' : 'Soon'">
+                                </span>
+                            </div>
+                            
+                            <!-- Description -->
+                            <p class="text-gray-400 mb-4" x-text="tool.description"></p>
+                            
+                            <!-- Features -->
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <template x-for="feature in tool.features" :key="feature">
+                                    <span class="text-xs px-2 py-1 bg-primary-500/10 text-primary-300 rounded-full"
+                                          x-text="feature">
+                                    </span>
+                                </template>
+                            </div>
+                            
+                            <!-- CTA -->
+                            <div class="flex items-center text-primary-400 font-semibold group">
+                                <span x-text="tool.status === 'live' ? '도구 실행 →' : '출시 알림 받기 →'"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Footer -->
+        <footer class="border-t border-white/10 py-12 px-4 backdrop-blur-lg bg-dark-900/80">
+            <div class="max-w-7xl mx-auto text-center">
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <span class="text-2xl">🛠️</span>
+                    <span class="font-bold gradient-text">SIGIL TOOLS</span>
+                </div>
+                <p class="text-gray-400 text-sm mb-4">
+                    Built with ❤️ using DAEMON Architecture | Privacy-First | Open Source
+                </p>
+                <div class="flex justify-center gap-6 text-sm text-gray-500">
+                    <a href="#" class="hover:text-primary-400 transition-colors">GitHub</a>
+                    <a href="#" class="hover:text-primary-400 transition-colors">Documentation</a>
+                    <a href="#" class="hover:text-primary-400 transition-colors">Privacy Policy</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- ========================================
+         LIQUID EFFECT ENGINE (Embedded)
+         ======================================== -->
+    <script>
+        /* Liquid Effect Canvas Animation */
+        const canvas = document.getElementById('liquid-canvas');
+        const ctx = canvas.getContext('2d', { alpha: true });
+        
+        const CONFIG = {
+            particlesPerMove: 2,
+            maxParticles: 120,
+            baseSize: 25,
+            sizeVariation: 35,
+            growthRate: 0.4,
+            fadeRate: 0.006,
+            baseOpacity: 0.5,
+            colors: { primary: '#6366f1', secondary: '#a855f7' }
+        };
+        
+        let points = [];
+        let mouse = { x: -1000, y: -1000 };
+        
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        
+        // Auto-generate particles for ambient effect
+        setInterval(() => {
+            if (points.length < CONFIG.maxParticles / 2) {
+                points.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    size: Math.random() * 30 + 20,
+                    opacity: 0.3,
+                    color: Math.random() > 0.5 ? CONFIG.colors.primary : CONFIG.colors.secondary
+                });
+            }
+        }, 300);
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            
+            for(let i = 0; i < CONFIG.particlesPerMove; i++) {
+                points.push({
+                    x: e.clientX,
+                    y: e.clientY,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: Math.random() * CONFIG.sizeVariation + CONFIG.baseSize,
+                    opacity: CONFIG.baseOpacity,
+                    color: i % 2 === 0 ? CONFIG.colors.primary : CONFIG.colors.secondary
+                });
+            }
+            
+            if (points.length > CONFIG.maxParticles) {
+                points.splice(0, CONFIG.particlesPerMove);
+            }
+        });
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            points.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.size += CONFIG.growthRate;
+                p.opacity -= CONFIG.fadeRate;
+                
+                if (p.opacity <= 0) {
+                    points.splice(i, 1);
+                    return;
+                }
+                
+                ctx.beginPath();
+                const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                const hexOpacity = Math.floor(p.opacity * 255).toString(16).padStart(2, '0');
+                gradient.addColorStop(0, p.color + hexOpacity);
+                gradient.addColorStop(1, p.color + '00');
+                ctx.fillStyle = gradient;
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+    
+    <!-- ========================================
+         ALPINE.JS APP STATE
+         ======================================== -->
+    <script>
+        function toolsApp() {
+            return {
+                searchQuery: '',
+                selectedCategory: 'all',
+                
+                categories: [
+                    { id: 'all', name: '전체', icon: '🛠️' },
+                    { id: 'academic', name: '학업', icon: '📚' },
+                    { id: 'productivity', name: '생산성', icon: '⏰' },
+                    { id: 'lifestyle', name: '생활', icon: '💰' },
+                    { id: 'design', name: '디자인', icon: '🎨' }
+                ],
+                
+                tools: [
+                    // Academic Tools
+                    {
+                        id: 'gpa-calculator',
+                        name: 'GPA Calculator',
+                        nameKo: '학점 계산기',
+                        icon: '📊',
+                        category: 'academic',
+                        description: '학점과 이수학점을 입력하면 평점평균(GPA)을 자동 계산합니다.',
+                        features: ['4.5 / 4.3 지원', '학기별 관리', 'LocalStorage 저장', '누적 평점'],
+                        status: 'live'
+                    },
+                    {
+                        id: 'resume-builder',
+                        name: 'Resume Builder',
+                        nameKo: '이력서 빌더',
+                        icon: '📝',
+                        category: 'academic',
+                        description: 'Markdown으로 경력을 작성하면 세련된 PDF 이력서로 변환됩니다.',
+                        features: ['Markdown 지원', 'jsPDF 엔진', '실시간 프리뷰', '다중 템플릿'],
+                        status: 'soon'
+                    },
+                    {
+                        id: 'citation-generator',
+                        name: 'Citation Generator',
+                        nameKo: '인용구 생성기',
+                        icon: '📖',
+                        category: 'academic',
+                        description: '책/논문 정보를 입력하면 APA, MLA, Chicago 양식의 인용구를 생성합니다.',
+                        features: ['APA 7th', 'MLA 9th', 'Chicago', '복사 버튼'],
+                        status: 'live'
+                    },
+                    
+                    // Productivity Tools
+                    {
+                        id: 'pomodoro-timer',
+                        name: 'Pomodoro Timer',
+                        nameKo: '뽀모도로 타이머',
+                        icon: '🍅',
+                        category: 'productivity',
+                        description: '할 일 목록과 집중 시간을 함께 관리하는 생산성 타이머입니다.',
+                        features: ['Task List', 'Alpine.store', '집중 통계', '알림'],
+                        status: 'live'
+                    },
+                    {
+                        id: 'meeting-roulette',
+                        name: 'Meeting Roulette',
+                        nameKo: '회의 룰렛',
+                        icon: '🎲',
+                        category: 'productivity',
+                        description: '팀 프로젝트 발표자나 서기를 공정하게 선정하는 애니메이션 룰렛입니다.',
+                        features: ['애니메이션', '팀원 저장', '히스토리', '공정성'],
+                        status: 'live'
+                    },
+                    {
+                        id: 'project-roadmap',
+                        name: 'Project Roadmap',
+                        nameKo: '프로젝트 로드맵',
+                        icon: '📅',
+                        category: 'productivity',
+                        description: 'Mermaid.js로 텍스트 기반 Gantt 차트를 시각화합니다.',
+                        features: ['Mermaid.js', 'Gantt Chart', '텍스트 편집', 'PNG 저장'],
+                        status: 'soon'
+                    },
+                    
+                    // Lifestyle Tools
+                    {
+                        id: 'expense-splitter',
+                        name: 'Expense Splitter',
+                        nameKo: '더치페이 계산기',
+                        icon: '💸',
+                        category: 'lifestyle',
+                        description: '회식/여행 비용을 인원별로 나누고 카톡 공유용 메시지를 생성합니다.',
+                        features: ['정산 계산', '카톡 메시지', '인원 관리', '영수증 촬영'],
+                        status: 'live'
+                    },
+                    
+                    // Design & Media Tools
+                    {
+                        id: 'image-resizer',
+                        name: 'Image Batch Resizer',
+                        nameKo: '이미지 일괄 압축',
+                        icon: '🖼️',
+                        category: 'design',
+                        description: '여러 이미지를 한번에 압축/리사이즈하고 ZIP으로 다운로드합니다.',
+                        features: ['Canvas API', 'Batch 처리', 'ZIP 압축', 'WebP 변환'],
+                        status: 'soon'
+                    },
+                    {
+                        id: 'privacy-blur',
+                        name: 'Privacy Blur Tool',
+                        nameKo: '프라이버시 블러',
+                        icon: '🔒',
+                        category: 'design',
+                        description: '사진 속 얼굴, 학번, 전화번호를 드래그로 문질러 가립니다.',
+                        features: ['드래그 블러', 'Canvas 처리', '실시간 저장', '개인정보 보호'],
+                        status: 'soon'
+                    },
+                    {
+                        id: 'color-extractor',
+                        name: 'Color Palette Extractor',
+                        nameKo: '색상 추출기',
+                        icon: '🎨',
+                        category: 'design',
+                        description: '이미지에서 주요 색상을 추출하여 Hex 코드와 팔레트를 제공합니다.',
+                        features: ['색상 분석', 'Hex 코드', 'Copy to Clipboard', 'Palette'],
+                        status: 'soon'
+                    }
+                ],
+                
+                get stats() {
+                    return {
+                        total: this.tools.length,
+                        live: this.tools.filter(t => t.status === 'live').length,
+                        soon: this.tools.filter(t => t.status === 'soon').length
+                    };
+                },
+                
+                get filteredTools() {
+                    let result = this.tools;
+                    
+                    // Category filter
+                    if (this.selectedCategory !== 'all') {
+                        result = result.filter(t => t.category === this.selectedCategory);
+                    }
+                    
+                    // Search filter
+                    if (this.searchQuery.trim()) {
+                        const query = this.searchQuery.toLowerCase();
+                        result = result.filter(t => 
+                            t.name.toLowerCase().includes(query) ||
+                            t.nameKo.toLowerCase().includes(query) ||
+                            t.description.toLowerCase().includes(query) ||
+                            t.features.some(f => f.toLowerCase().includes(query))
+                        );
+                    }
+                    
+                    return result;
+                },
+                
+                scrollToTools() {
+                    document.getElementById('tools-section').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                },
+                
+                selectCategory(categoryId) {
+                    this.selectedCategory = categoryId;
+                    this.scrollToTools();
+                },
+                
+                openTool(id) {
+                    const tool = this.tools.find(t => t.id === id);
+                    if (tool.status === 'live') {
+                        window.location.href = `/tools/${id}.html`;
+                    } else {
+                        alert(`🚀 ${tool.nameKo}이(가) 곧 출시됩니다!\n\n알림을 받으시려면 GitHub에서 Star를 눌러주세요.`);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
